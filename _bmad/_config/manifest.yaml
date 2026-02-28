@@ -1,0 +1,28 @@
+installation:
+  version: 6.0.3
+  installDate: 2026-02-27T23:23:23.004Z
+  lastUpdated: 2026-02-27T23:23:23.004Z
+modules:
+  - name: core
+    version: 6.0.3
+    installDate: 2026-02-27T23:23:21.314Z
+    lastUpdated: 2026-02-27T23:23:21.314Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.0.3
+    installDate: 2026-02-27T23:23:08.066Z
+    lastUpdated: 2026-02-27T23:23:21.314Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: gds
+    version: 0.1.9
+    installDate: 2026-02-27T23:23:16.248Z
+    lastUpdated: 2026-02-27T23:23:23.004Z
+    source: external
+    npmPackage: bmad-game-dev-studio
+    repoUrl: https://github.com/bmad-code-org/bmad-module-game-dev-studio.git
+ides:
+  - antigravity
