@@ -3,7 +3,7 @@
   "module-path": "./spacetimedb",
   "generate": [
     {
-      "lang": "typescript",
+      "language": "typescript",
       "out_dir": "./client/src/module_bindings"
     }
   ]

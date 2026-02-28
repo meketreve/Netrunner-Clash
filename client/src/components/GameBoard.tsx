@@ -1,273 +1,210 @@
 'use client';
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { useSpacetimeDB, useTable } from 'spacetimedb/react';
+import { tables, type DbConnection } from '@/module_bindings';
+import type { Game, CardInstance, GameLog, Player } from '@/module_bindings/types';
 import Card from './Card';
 import { getCardVisual } from '@/lib/card-data';
 import '@/styles/cards.css';
 import '@/styles/game.css';
 
 // ============================================================
-// MOCK GAME STATE (until SpacetimeDB is connected)
-// This simulates the state that SpacetimeDB would provide
+// LOBBY COMPONENT — Matchmaking
 // ============================================================
 
-interface CardInstance {
-    id: number;
-    cardDefId: number;
-    location: 'deck' | 'hand' | 'field' | 'graveyard';
-    fieldSlot: number;
-    currentHp: number;
-    currentAtk: number;
-    canAttack: boolean;
-    hasShield: boolean;
-    hasDrain: boolean;
-    stealthTurns: number;
-    tempAtkBuff: number;
-    owner: 'player' | 'opponent';
-}
+function Lobby() {
+    const spacetime = useSpacetimeDB();
+    const conn = spacetime.getConnection() as DbConnection | null;
+    const myIdentity = spacetime.identity?.toHexString() || '';
 
-interface GameState {
-    turnNumber: number;
-    phase: 'main' | 'combat' | 'end';
-    isMyTurn: boolean;
-    myHp: number;
-    opponentHp: number;
-    myEnergy: number;
-    myMaxEnergy: number;
-    opponentEnergy: number;
-    opponentMaxEnergy: number;
-    status: 'active' | 'finished';
-    winnerId: string;
-    cards: CardInstance[];
-    log: { id: number; message: string; eventType: string; turn: number }[];
-}
+    const [allPlayers] = useTable(tables.player);
+    const [allGames] = useTable(tables.game);
 
-// Generate initial mock game state
-function createMockGame(): GameState {
-    const playerHand: CardInstance[] = [
-        { id: 1, cardDefId: 1, location: 'hand', fieldSlot: 0, currentHp: 3, currentAtk: 2, canAttack: false, hasShield: false, hasDrain: false, stealthTurns: 0, tempAtkBuff: 0, owner: 'player' },
-        { id: 2, cardDefId: 3, location: 'hand', fieldSlot: 0, currentHp: 3, currentAtk: 4, canAttack: false, hasShield: false, hasDrain: false, stealthTurns: 0, tempAtkBuff: 0, owner: 'player' },
-        { id: 3, cardDefId: 6, location: 'hand', fieldSlot: 0, currentHp: 8, currentAtk: 2, canAttack: false, hasShield: false, hasDrain: false, stealthTurns: 0, tempAtkBuff: 0, owner: 'player' },
-        { id: 4, cardDefId: 15, location: 'hand', fieldSlot: 0, currentHp: 0, currentAtk: 0, canAttack: false, hasShield: false, hasDrain: false, stealthTurns: 0, tempAtkBuff: 0, owner: 'player' },
-    ];
+    const myPlayer = allPlayers.find((p: Player) => p.identity.toHexString() === myIdentity);
+    const isInQueue = myPlayer?.isInQueue ?? false;
 
-    const opponentField: CardInstance[] = [
-        { id: 10, cardDefId: 1, location: 'field', fieldSlot: 1, currentHp: 3, currentAtk: 2, canAttack: true, hasShield: false, hasDrain: false, stealthTurns: 0, tempAtkBuff: 0, owner: 'opponent' },
-        { id: 11, cardDefId: 5, location: 'field', fieldSlot: 2, currentHp: 5, currentAtk: 3, canAttack: true, hasShield: false, hasDrain: false, stealthTurns: 0, tempAtkBuff: 0, owner: 'opponent' },
-    ];
+    // Check if we have an active game
+    const activeGame = allGames.find((g: Game) =>
+        g.status === 'active' &&
+        (g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity)
+    );
 
-    return {
-        turnNumber: 3,
-        phase: 'main',
-        isMyTurn: true,
-        myHp: 20,
-        opponentHp: 18,
-        myEnergy: 3,
-        myMaxEnergy: 3,
-        opponentEnergy: 2,
-        opponentMaxEnergy: 3,
-        status: 'active',
-        winnerId: '',
-        cards: [...playerHand, ...opponentField],
-        log: [
-            { id: 1, message: 'Partida iniciada!', eventType: 'game_start', turn: 1 },
-            { id: 2, message: 'Oponente invocou Chrome Sentinel', eventType: 'summon', turn: 2 },
-            { id: 3, message: 'Oponente invocou Viral Wraith', eventType: 'summon', turn: 2 },
-            { id: 4, message: 'Chrome Sentinel atacou! -2 HP', eventType: 'attack', turn: 2 },
-        ],
-    };
+    if (activeGame) {
+        return <GameBoard game={activeGame} myIdentity={myIdentity} />;
+    }
+
+    const handleJoinQueue = () => conn?.reducers.joinQueue({});
+    const handleLeaveQueue = () => conn?.reducers.leaveQueue({});
+
+    return (
+        <div className="game-page">
+            <div className="lobby">
+                <div className="lobby__header">
+                    <h1 className="lobby__title">NETRUNNER CLASH</h1>
+                    <p className="lobby__subtitle">
+                        {spacetime.isActive ? '🟢 Conectado ao servidor' : '🔴 Conectando...'}
+                    </p>
+                </div>
+
+                {myPlayer && (
+                    <div className="lobby__stats">
+                        <div className="lobby__stat">
+                            <span className="lobby__stat-label">NETRUNNER</span>
+                            <span className="lobby__stat-value">{myPlayer.name}</span>
+                        </div>
+                        <div className="lobby__stat">
+                            <span className="lobby__stat-label">VITÓRIAS</span>
+                            <span className="lobby__stat-value" style={{ color: 'var(--green)' }}>{myPlayer.wins}</span>
+                        </div>
+                        <div className="lobby__stat">
+                            <span className="lobby__stat-label">DERROTAS</span>
+                            <span className="lobby__stat-value" style={{ color: 'var(--red)' }}>{myPlayer.losses}</span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="lobby__actions">
+                    {!isInQueue ? (
+                        <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive}>
+                            ⚔️ BUSCAR PARTIDA
+                        </button>
+                    ) : (
+                        <div className="lobby__queue">
+                            <div className="lobby__queue-spinner" />
+                            <p className="lobby__queue-text">Procurando oponente...</p>
+                            <button className="cyber-btn cyber-btn--magenta" onClick={handleLeaveQueue}>
+                                ✖ CANCELAR
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="lobby__online">
+                    <span className="lobby__online-label">Jogadores online:</span>
+                    <span className="lobby__online-count">{allPlayers.filter((p: Player) => p.isOnline).length}</span>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 // ============================================================
-// GAME BOARD COMPONENT
+// GAME BOARD COMPONENT — Real SpacetimeDB Data
 // ============================================================
 
-export default function GameBoard() {
-    const [game, setGame] = useState<GameState>(createMockGame);
-    const [selectedCardId, setSelectedCardId] = useState<number | null>(null);
+function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
+    const spacetime = useSpacetimeDB();
+    const conn = spacetime.getConnection() as DbConnection | null;
+
+    const [allCards] = useTable(tables.cardInstance);
+    const [allLogs] = useTable(tables.gameLog);
+
+    const [selectedCardId, setSelectedCardId] = useState<bigint | null>(null);
     const [targetMode, setTargetMode] = useState<'none' | 'attack' | 'buff' | 'hack'>('none');
 
-    // Derived data
+    // Filter data for this game
+    const gameCards = useMemo(() =>
+        allCards.filter((c: CardInstance) => c.gameId === game.id), [allCards, game.id]);
+    const gameLogs = useMemo(() =>
+        allLogs.filter((l: GameLog) => l.gameId === game.id), [allLogs, game.id]);
+
+    const isMyTurn = game.currentTurn.toHexString() === myIdentity;
+    const amP1 = game.player1.toHexString() === myIdentity;
+
+    const myHp = amP1 ? game.p1Hp : game.p2Hp;
+    const opponentHp = amP1 ? game.p2Hp : game.p1Hp;
+    const myEnergy = amP1 ? game.p1Energy : game.p2Energy;
+    const myMaxEnergy = amP1 ? game.p1MaxEnergy : game.p2MaxEnergy;
+    const opponentEnergy = amP1 ? game.p2Energy : game.p1Energy;
+    const opponentMaxEnergy = amP1 ? game.p2MaxEnergy : game.p1MaxEnergy;
+
+    // Separate cards by owner and location
     const myHandCards = useMemo(() =>
-        game.cards.filter(c => c.owner === 'player' && c.location === 'hand'), [game.cards]);
+        gameCards.filter((c: CardInstance) => c.owner.toHexString() === myIdentity && c.location === 'hand'),
+        [gameCards, myIdentity]);
 
     const myFieldCards = useMemo(() =>
-        game.cards.filter(c => c.owner === 'player' && c.location === 'field'), [game.cards]);
+        gameCards.filter((c: CardInstance) => c.owner.toHexString() === myIdentity && c.location === 'field'),
+        [gameCards, myIdentity]);
 
     const opponentFieldCards = useMemo(() =>
-        game.cards.filter(c => c.owner === 'opponent' && c.location === 'field'), [game.cards]);
+        gameCards.filter((c: CardInstance) => c.owner.toHexString() !== myIdentity && c.location === 'field'),
+        [gameCards, myIdentity]);
 
     // ============================================================
-    // ACTIONS (mock — will be replaced by SpacetimeDB reducers)
+    // ACTIONS — Call real SpacetimeDB reducers
     // ============================================================
 
-    const handlePlayCard = useCallback((cardId: number, slot: number) => {
-        setGame(prev => {
-            const card = prev.cards.find(c => c.id === cardId);
-            if (!card || card.location !== 'hand') return prev;
-
-            const def = getCardVisual(card.cardDefId);
-            if (prev.myEnergy < def.cost) return prev;
-
-            const newCards = prev.cards.map(c => {
-                if (c.id === cardId) {
-                    return { ...c, location: 'field' as const, fieldSlot: slot, canAttack: false };
-                }
-                return c;
-            });
-
-            const newLog = [...prev.log, {
-                id: prev.log.length + 1,
-                message: `${def.name} invocado no slot ${slot}`,
-                eventType: 'summon',
-                turn: prev.turnNumber,
-            }];
-
-            return { ...prev, cards: newCards, myEnergy: prev.myEnergy - def.cost, log: newLog };
-        });
+    const handlePlayCard = useCallback((cardId: bigint, slot: number) => {
+        conn?.reducers.playCard({ gameId: game.id, cardInstanceId: cardId, slot });
         setSelectedCardId(null);
         setTargetMode('none');
-    }, []);
+    }, [conn, game.id]);
 
-    const handleAttack = useCallback((attackerId: number, targetId: number) => {
-        setGame(prev => {
-            const attacker = prev.cards.find(c => c.id === attackerId);
-            const target = prev.cards.find(c => c.id === targetId);
-            if (!attacker || !target) return prev;
-            if (!attacker.canAttack) return prev;
-
-            const atkDef = getCardVisual(attacker.cardDefId);
-            const tgtDef = getCardVisual(target.cardDefId);
-            const damage = attacker.currentAtk + attacker.tempAtkBuff;
-
-            let newCards = [...prev.cards];
-            let newHp = prev.opponentHp;
-            const newLog = [...prev.log];
-
-            const tgtNewHp = target.currentHp - damage;
-
-            if (tgtNewHp <= 0) {
-                // Kill the target
-                newCards = newCards.map(c => {
-                    if (c.id === targetId) return { ...c, location: 'graveyard' as const, currentHp: 0 };
-                    if (c.id === attackerId) return { ...c, canAttack: false };
-                    return c;
-                });
-
-                // Overflow damage!
-                const overflow = Math.abs(tgtNewHp);
-                if (overflow > 0) {
-                    newHp -= overflow;
-                    newLog.push({
-                        id: newLog.length + 1,
-                        message: `💥 ${tgtDef.name} destruído! ${overflow} dano excedente no jogador!`,
-                        eventType: 'damage',
-                        turn: prev.turnNumber,
-                    });
-                } else {
-                    newLog.push({
-                        id: newLog.length + 1,
-                        message: `💀 ${tgtDef.name} destruído por ${atkDef.name}!`,
-                        eventType: 'death',
-                        turn: prev.turnNumber,
-                    });
-                }
-            } else {
-                newCards = newCards.map(c => {
-                    if (c.id === targetId) return { ...c, currentHp: tgtNewHp };
-                    if (c.id === attackerId) return { ...c, canAttack: false };
-                    return c;
-                });
-                newLog.push({
-                    id: newLog.length + 1,
-                    message: `⚔️ ${atkDef.name} → ${tgtDef.name} (${damage} DMG, HP: ${tgtNewHp})`,
-                    eventType: 'attack',
-                    turn: prev.turnNumber,
-                });
-            }
-
-            let status = prev.status;
-            let winnerId = prev.winnerId;
-            if (newHp <= 0) {
-                status = 'finished';
-                winnerId = 'player';
-                newLog.push({ id: newLog.length + 1, message: '🏆 VITÓRIA!', eventType: 'game_end', turn: prev.turnNumber });
-            }
-
-            return { ...prev, cards: newCards, opponentHp: newHp, log: newLog, status, winnerId };
-        });
+    const handleAttack = useCallback((attackerId: bigint, targetId: bigint) => {
+        conn?.reducers.attack({ gameId: game.id, attackerId, targetId });
         setSelectedCardId(null);
         setTargetMode('none');
-    }, []);
+    }, [conn, game.id]);
 
     const handleEndPhase = useCallback(() => {
-        setGame(prev => {
-            if (prev.phase === 'main') {
-                // Enable attacks for field cards
-                const newCards = prev.cards.map(c => {
-                    if (c.owner === 'player' && c.location === 'field') {
-                        return { ...c, canAttack: true };
-                    }
-                    return c;
-                });
-                return { ...prev, phase: 'combat', cards: newCards };
-            }
-            return prev;
-        });
-    }, []);
+        conn?.reducers.endPhase({ gameId: game.id });
+    }, [conn, game.id]);
 
     const handleEndTurn = useCallback(() => {
-        setGame(prev => ({
-            ...prev,
-            phase: 'main',
-            isMyTurn: false,
-            turnNumber: prev.turnNumber + 1,
-            log: [...prev.log, {
-                id: prev.log.length + 1,
-                message: `Turno ${prev.turnNumber + 1} — Vez do oponente`,
-                eventType: 'turn',
-                turn: prev.turnNumber + 1,
-            }],
-        }));
-        // Simular turno do oponente (auto-play após 2s)
-        setTimeout(() => {
-            setGame(prev => ({
-                ...prev,
-                isMyTurn: true,
-                turnNumber: prev.turnNumber + 1,
-                myMaxEnergy: Math.min(8, prev.myMaxEnergy + 1),
-                myEnergy: Math.min(8, prev.myMaxEnergy + 1),
-                phase: 'main',
-                cards: prev.cards.map(c => {
-                    if (c.owner === 'player' && c.location === 'field') {
-                        return { ...c, canAttack: false, tempAtkBuff: 0 };
-                    }
-                    return c;
-                }),
-                log: [...prev.log, {
-                    id: prev.log.length + 1,
-                    message: `Turno ${prev.turnNumber + 1} — Sua vez!`,
-                    eventType: 'turn',
-                    turn: prev.turnNumber + 1,
-                }],
-            }));
-        }, 2000);
-    }, []);
+        conn?.reducers.endTurn({ gameId: game.id });
+    }, [conn, game.id]);
+
+    const handleForfeit = useCallback(() => {
+        conn?.reducers.forfeit({ gameId: game.id });
+    }, [conn, game.id]);
+
+    const handleUseHack = useCallback((cardId: bigint, targetId: bigint) => {
+        conn?.reducers.useHack({ gameId: game.id, cardInstanceId: cardId, targetId });
+        setSelectedCardId(null);
+        setTargetMode('none');
+    }, [conn, game.id]);
+
+    const handleApplyBuff = useCallback((buffCardId: bigint, targetId: bigint) => {
+        conn?.reducers.applyBuff({ gameId: game.id, buffCardId, targetId });
+        setSelectedCardId(null);
+        setTargetMode('none');
+    }, [conn, game.id]);
 
     // Card click handlers
     const handleCardClick = useCallback((card: CardInstance) => {
-        if (!game.isMyTurn) return;
+        if (!isMyTurn) return;
 
         // If in target mode, select target
-        if (targetMode === 'attack' && card.owner === 'opponent' && card.location === 'field') {
+        if (targetMode === 'attack' && card.owner.toHexString() !== myIdentity && card.location === 'field') {
             if (selectedCardId !== null) {
                 handleAttack(selectedCardId, card.id);
             }
             return;
         }
 
+        if (targetMode === 'buff' && card.owner.toHexString() === myIdentity && card.location === 'field') {
+            if (selectedCardId !== null) {
+                const selectedCard = gameCards.find((c: CardInstance) => c.id === selectedCardId);
+                if (selectedCard) {
+                    const def = getCardVisual(selectedCard.cardDefId);
+                    if (def.type === 'buff') handleApplyBuff(selectedCardId, card.id);
+                    else if (def.type === 'hack') handleUseHack(selectedCardId, card.id);
+                }
+            }
+            return;
+        }
+
+        if (targetMode === 'hack' && card.owner.toHexString() !== myIdentity && card.location === 'field') {
+            if (selectedCardId !== null) {
+                handleUseHack(selectedCardId, card.id);
+            }
+            return;
+        }
+
         // Select own card
-        if (card.owner === 'player') {
+        if (card.owner.toHexString() === myIdentity) {
             if (selectedCardId === card.id) {
                 setSelectedCardId(null);
                 setTargetMode('none');
@@ -276,61 +213,35 @@ export default function GameBoard() {
                 const def = getCardVisual(card.cardDefId);
                 if (card.location === 'field' && card.canAttack && game.phase === 'combat') {
                     setTargetMode('attack');
+                } else if (card.location === 'hand' && def.type === 'buff') {
+                    setTargetMode('buff');
+                } else if (card.location === 'hand' && def.type === 'hack') {
+                    setTargetMode('hack');
                 } else {
                     setTargetMode('none');
                 }
             }
         }
-    }, [game.isMyTurn, game.phase, selectedCardId, targetMode, handleAttack]);
+    }, [isMyTurn, game.phase, selectedCardId, targetMode, myIdentity, gameCards, handleAttack, handleApplyBuff, handleUseHack]);
 
     const handleSlotClick = useCallback((slot: number) => {
-        if (!game.isMyTurn || game.phase !== 'main') return;
+        if (!isMyTurn || game.phase !== 'main') return;
         if (selectedCardId === null) return;
 
-        const card = game.cards.find(c => c.id === selectedCardId);
+        const card = gameCards.find((c: CardInstance) => c.id === selectedCardId);
         if (!card || card.location !== 'hand') return;
 
         const def = getCardVisual(card.cardDefId);
         if (def.type !== 'character') return;
 
         handlePlayCard(selectedCardId, slot);
-    }, [game, selectedCardId, handlePlayCard]);
+    }, [isMyTurn, game.phase, selectedCardId, gameCards, handlePlayCard]);
 
     const handleDirectAttack = useCallback(() => {
         if (targetMode === 'attack' && selectedCardId !== null && opponentFieldCards.length === 0) {
-            // Direct attack to player
-            setGame(prev => {
-                const attacker = prev.cards.find(c => c.id === selectedCardId);
-                if (!attacker) return prev;
-                const atkDef = getCardVisual(attacker.cardDefId);
-                const damage = attacker.currentAtk + attacker.tempAtkBuff;
-
-                const newHp = prev.opponentHp - damage;
-                const newCards = prev.cards.map(c =>
-                    c.id === selectedCardId ? { ...c, canAttack: false } : c
-                );
-
-                let status = prev.status;
-                let winnerId = prev.winnerId;
-                const newLog = [...prev.log, {
-                    id: prev.log.length + 1,
-                    message: `⚔️ ${atkDef.name} atacou diretamente! -${damage} HP!`,
-                    eventType: 'attack',
-                    turn: prev.turnNumber,
-                }];
-
-                if (newHp <= 0) {
-                    status = 'finished';
-                    winnerId = 'player';
-                    newLog.push({ id: newLog.length + 1, message: '🏆 VITÓRIA!', eventType: 'game_end', turn: prev.turnNumber });
-                }
-
-                return { ...prev, cards: newCards, opponentHp: newHp, log: newLog, status, winnerId };
-            });
-            setSelectedCardId(null);
-            setTargetMode('none');
+            handleAttack(selectedCardId, BigInt(0));
         }
-    }, [targetMode, selectedCardId, opponentFieldCards.length]);
+    }, [targetMode, selectedCardId, opponentFieldCards.length, handleAttack]);
 
     // ============================================================
     // RENDER
@@ -339,17 +250,15 @@ export default function GameBoard() {
     const renderFieldSlots = (cards: CardInstance[], isPlayer: boolean) => {
         const slots = [0, 1, 2, 3];
         return slots.map(slot => {
-            const card = cards.find(c => c.fieldSlot === slot);
+            const card = cards.find((c: CardInstance) => c.fieldSlot === slot);
             const isEmpty = !card;
-            const canPlace = isPlayer && game.isMyTurn && game.phase === 'main' && selectedCardId !== null && isEmpty;
+            const canPlace = isPlayer && isMyTurn && game.phase === 'main' && selectedCardId !== null && isEmpty;
 
             return (
                 <div
                     key={slot}
                     className={`field__slot ${isEmpty ? 'field__slot--empty' : ''} ${canPlace ? 'field__slot--can-place' : ''}`}
-                    onClick={() => {
-                        if (canPlace) handleSlotClick(slot);
-                    }}
+                    onClick={() => { if (canPlace) handleSlotClick(slot); }}
                 >
                     {card && (
                         <Card
@@ -362,7 +271,7 @@ export default function GameBoard() {
                             stealthTurns={card.stealthTurns}
                             tempAtkBuff={card.tempAtkBuff}
                             isSelected={selectedCardId === card.id}
-                            isTarget={targetMode === 'attack' && card.owner === 'opponent'}
+                            isTarget={targetMode === 'attack' && card.owner.toHexString() !== myIdentity}
                             location="field"
                             onClick={() => handleCardClick(card)}
                         />
@@ -376,6 +285,8 @@ export default function GameBoard() {
         hp <= 5 ? 'player-info__hp-fill--low' :
             hp <= 10 ? 'player-info__hp-fill--mid' : '';
 
+    const isWinner = game.winnerId === myIdentity;
+
     return (
         <div className="game-page">
             <div className="board">
@@ -385,13 +296,13 @@ export default function GameBoard() {
                     <div className="board__phase-info">
                         FASE: {game.phase === 'main' ? '⚙️ PRINCIPAL' : game.phase === 'combat' ? '⚔️ COMBATE' : '🔚 FIM'}
                     </div>
-                    <div className="board__turn-info" style={{ color: game.isMyTurn ? 'var(--green)' : 'var(--red)' }}>
-                        {game.isMyTurn ? 'SUA VEZ' : 'VEZ DO OPONENTE'}
+                    <div className="board__turn-info" style={{ color: isMyTurn ? 'var(--green)' : 'var(--red)' }}>
+                        {isMyTurn ? 'SUA VEZ' : 'VEZ DO OPONENTE'}
                     </div>
                 </div>
 
                 {/* Opponent Info */}
-                <div className={`player-info player-info--opponent ${!game.isMyTurn ? 'player-info--active' : ''}`}>
+                <div className={`player-info player-info--opponent ${!isMyTurn ? 'player-info--active' : ''}`}>
                     <div className="player-info__name" style={{ color: 'var(--magenta)' }}>OPONENTE</div>
                     <div className="player-info__hp">
                         <div className="player-info__hp-bar"
@@ -399,56 +310,51 @@ export default function GameBoard() {
                             style={{ cursor: targetMode === 'attack' && opponentFieldCards.length === 0 ? 'pointer' : 'default' }}
                         >
                             <div
-                                className={`player-info__hp-fill ${hpClass(game.opponentHp)}`}
-                                style={{ width: `${(game.opponentHp / 20) * 100}%` }}
+                                className={`player-info__hp-fill ${hpClass(opponentHp)}`}
+                                style={{ width: `${(opponentHp / 20) * 100}%` }}
                             />
                         </div>
-                        <div className="player-info__hp-text">{game.opponentHp}/20</div>
+                        <div className="player-info__hp-text">{opponentHp}/20</div>
                     </div>
                     <div className="player-info__energy">
-                        {Array.from({ length: game.opponentMaxEnergy }, (_, i) => (
-                            <div key={i} className={`player-info__energy-crystal ${i < game.opponentEnergy ? 'player-info__energy-crystal--filled' : 'player-info__energy-crystal--empty'}`} />
+                        {Array.from({ length: opponentMaxEnergy }, (_, i) => (
+                            <div key={i} className={`player-info__energy-crystal ${i < opponentEnergy ? 'player-info__energy-crystal--filled' : 'player-info__energy-crystal--empty'}`} />
                         ))}
                     </div>
                 </div>
 
                 {/* Game Field */}
                 <div className="field">
-                    {/* Opponent Field */}
                     <div className="field__row field__row--opponent">
                         {renderFieldSlots(opponentFieldCards, false)}
                     </div>
-
-                    {/* Divider */}
                     <div className="field__divider" />
-
-                    {/* Player Field */}
                     <div className="field__row field__row--player">
                         {renderFieldSlots(myFieldCards, true)}
                     </div>
                 </div>
 
                 {/* Player Info */}
-                <div className={`player-info ${game.isMyTurn ? 'player-info--active' : ''}`}>
+                <div className={`player-info ${isMyTurn ? 'player-info--active' : ''}`}>
                     <div className="player-info__name" style={{ color: 'var(--cyan)' }}>VOCÊ</div>
                     <div className="player-info__hp">
                         <div className="player-info__hp-bar">
                             <div
-                                className={`player-info__hp-fill ${hpClass(game.myHp)}`}
-                                style={{ width: `${(game.myHp / 20) * 100}%` }}
+                                className={`player-info__hp-fill ${hpClass(myHp)}`}
+                                style={{ width: `${(myHp / 20) * 100}%` }}
                             />
                         </div>
-                        <div className="player-info__hp-text">{game.myHp}/20</div>
+                        <div className="player-info__hp-text">{myHp}/20</div>
                     </div>
                     <div className="player-info__energy">
-                        {Array.from({ length: game.myMaxEnergy }, (_, i) => (
-                            <div key={i} className={`player-info__energy-crystal ${i < game.myEnergy ? 'player-info__energy-crystal--filled' : 'player-info__energy-crystal--empty'}`} />
+                        {Array.from({ length: myMaxEnergy }, (_, i) => (
+                            <div key={i} className={`player-info__energy-crystal ${i < myEnergy ? 'player-info__energy-crystal--filled' : 'player-info__energy-crystal--empty'}`} />
                         ))}
                     </div>
                 </div>
 
                 {/* Turn Controls */}
-                {game.isMyTurn && game.status === 'active' && (
+                {isMyTurn && game.status === 'active' && (
                     <div className="controls">
                         {game.phase === 'main' && (
                             <button className="cyber-btn" onClick={handleEndPhase}>
@@ -466,14 +372,14 @@ export default function GameBoard() {
                     {myHandCards.length === 0 ? (
                         <span>Sem cartas na mão</span>
                     ) : (
-                        myHandCards.map(card => (
+                        myHandCards.map((card: CardInstance) => (
                             <Card
-                                key={card.id}
+                                key={String(card.id)}
                                 cardDefId={card.cardDefId}
                                 currentAtk={card.currentAtk}
                                 currentHp={card.currentHp}
                                 isSelected={selectedCardId === card.id}
-                                isDisabled={!game.isMyTurn || getCardVisual(card.cardDefId).cost > game.myEnergy}
+                                isDisabled={!isMyTurn || getCardVisual(card.cardDefId).cost > myEnergy}
                                 location="hand"
                                 onClick={() => handleCardClick(card)}
                             />
@@ -485,8 +391,8 @@ export default function GameBoard() {
             {/* Game Log */}
             <div className="game-log">
                 <div className="game-log__title">📋 LOG DE BATALHA</div>
-                {game.log.slice().reverse().map(entry => (
-                    <div key={entry.id} className={`game-log__entry game-log__entry--${entry.eventType}`}>
+                {gameLogs.slice().reverse().map((entry: GameLog) => (
+                    <div key={String(entry.id)} className={`game-log__entry game-log__entry--${entry.eventType}`}>
                         <small style={{ color: 'var(--text-muted)' }}>T{entry.turn}</small> {entry.message}
                     </div>
                 ))}
@@ -495,19 +401,34 @@ export default function GameBoard() {
             {/* Victory/Defeat Screen */}
             {game.status === 'finished' && (
                 <div className="victory-screen">
-                    <h1 className={`victory-screen__title ${game.winnerId === 'player' ? 'victory-screen__title--win' : 'victory-screen__title--lose'}`}>
-                        {game.winnerId === 'player' ? 'VITÓRIA' : 'DERROTA'}
+                    <h1 className={`victory-screen__title ${isWinner ? 'victory-screen__title--win' : 'victory-screen__title--lose'}`}>
+                        {isWinner ? 'VITÓRIA' : 'DERROTA'}
                     </h1>
                     <p className="victory-screen__subtitle">
-                        {game.winnerId === 'player'
+                        {isWinner
                             ? 'O netrunner inimigo foi desconectado.'
                             : 'Sua conexão foi terminada.'}
                     </p>
-                    <button className="cyber-btn" onClick={() => setGame(createMockGame())}>
-                        🔄 JOGAR NOVAMENTE
-                    </button>
+                    <a href="/" className="cyber-btn">
+                        🔄 VOLTAR AO MENU
+                    </a>
                 </div>
+            )}
+
+            {/* Forfeit Button */}
+            {game.status === 'active' && (
+                <button className="cyber-btn cyber-btn--small cyber-btn--danger" onClick={handleForfeit} style={{ position: 'fixed', top: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.6 }}>
+                    🏳️ DESISTIR
+                </button>
             )}
         </div>
     );
+}
+
+// ============================================================
+// MAIN EXPORT — Shows Lobby or Game
+// ============================================================
+
+export default function GamePage() {
+    return <Lobby />;
 }

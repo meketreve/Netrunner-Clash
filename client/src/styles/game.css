@@ -50,6 +50,134 @@
 }
 
 /* ============================================ */
+/* LOBBY                                        */
+/* ============================================ */
+
+.lobby {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    text-align: center;
+    padding: 24px;
+}
+
+.lobby__header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lobby__title {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan);
+    animation: neonFlicker 3s infinite;
+}
+
+.lobby__subtitle {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.lobby__stats {
+    display: flex;
+    gap: 32px;
+    padding: 20px 40px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.lobby__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+}
+
+.lobby__stat-label {
+    font-family: var(--font-display);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.lobby__stat-value {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--cyan);
+}
+
+.lobby__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.cyber-btn--large {
+    font-size: 1.2rem;
+    padding: 16px 48px;
+}
+
+.cyber-btn--danger {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.cyber-btn--danger:hover {
+    background: rgba(255, 51, 102, 0.15);
+}
+
+.cyber-btn--small {
+    font-size: 0.65rem;
+    padding: 6px 12px;
+}
+
+.lobby__queue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.lobby__queue-spinner {
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border-subtle);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.lobby__queue-text {
+    font-family: var(--font-display);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    animation: neonFlicker 2s infinite;
+}
+
+.lobby__online {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+}
+
+.lobby__online-count {
+    color: var(--green);
+    font-weight: 700;
+    font-family: var(--font-display);
+}
+
+/* ============================================ */
 /* GAME BOARD                                   */
 /* ============================================ */
 
