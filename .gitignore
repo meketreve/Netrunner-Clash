@@ -1,0 +1,33 @@
+# BMAD Agent Framework
+_bmad/
+_bmad-output/
+.agents/
+_agents/
+
+# Node modules
+node_modules/
+
+# Next.js
+client/.next/
+client/out/
+
+# SpacetimeDB
+spacetimedb/dist/
+spacetimedb/node_modules/
+spacetime.local.json
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# SpacetimeDB generated bindings (regenerated via spacetime generate)
+client/src/module_bindings/

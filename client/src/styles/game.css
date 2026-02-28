@@ -1,0 +1,368 @@
+/* ============================================ */
+/* GAME BOARD STYLES                            */
+/* ============================================ */
+
+.game-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================ */
+/* MATCHMAKING SCREEN                           */
+/* ============================================ */
+
+.matchmaking {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    text-align: center;
+}
+
+.matchmaking__title {
+    font-size: 2rem;
+    animation: neonFlicker 3s infinite;
+}
+
+.matchmaking__subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+.matchmaking__spinner {
+    width: 60px;
+    height: 60px;
+    border: 3px solid var(--border-subtle);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================ */
+/* GAME BOARD                                   */
+/* ============================================ */
+
+.board {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    gap: 8px;
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+/* Top bar */
+.board__top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: var(--bg-panel);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+}
+
+.board__turn-info {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    color: var(--cyan);
+    letter-spacing: 0.1em;
+}
+
+.board__phase-info {
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+/* Player Info Bar */
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    background: var(--bg-panel);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-subtle);
+}
+
+.player-info--active {
+    border-color: var(--cyan-dim);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+}
+
+.player-info--opponent {
+    flex-direction: row-reverse;
+}
+
+.player-info__name {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 600;
+    min-width: 120px;
+}
+
+.player-info__hp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.player-info__hp-bar {
+    flex: 1;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    position: relative;
+}
+
+.player-info__hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green) 0%, #00cc66 100%);
+    border-radius: var(--radius-sm);
+    transition: width 0.5s ease;
+    position: relative;
+}
+
+.player-info__hp-fill--low {
+    background: linear-gradient(90deg, var(--red) 0%, #cc2244 100%);
+}
+
+.player-info__hp-fill--mid {
+    background: linear-gradient(90deg, var(--yellow) 0%, #ccaa00 100%);
+}
+
+.player-info__hp-text {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 50px;
+    text-align: center;
+}
+
+.player-info__energy {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.player-info__energy-crystal {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--yellow);
+    background: rgba(240, 224, 0, 0.1);
+    transition: var(--transition-fast);
+}
+
+.player-info__energy-crystal--filled {
+    background: var(--yellow);
+    box-shadow: 0 0 6px var(--yellow);
+}
+
+.player-info__energy-crystal--empty {
+    opacity: 0.3;
+}
+
+/* Field Area */
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.field__row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px;
+    min-height: 160px;
+    align-items: center;
+}
+
+.field__row--opponent {
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.field__row--player {
+    border-top: 1px solid var(--border-subtle);
+}
+
+.field__slot {
+    width: 110px;
+    height: 150px;
+    border: 2px dashed rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.field__slot--empty:hover {
+    border-color: rgba(0, 240, 255, 0.3);
+    background: rgba(0, 240, 255, 0.03);
+}
+
+.field__slot--can-place {
+    border-color: rgba(0, 255, 136, 0.4);
+    background: rgba(0, 255, 136, 0.05);
+    animation: glow-pulse 2s infinite;
+}
+
+/* Divider */
+.field__divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan-dim), transparent);
+    margin: 4px 0;
+    position: relative;
+}
+
+.field__divider::after {
+    content: '⚡';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.9rem;
+    background: var(--bg-deep);
+    padding: 0 12px;
+}
+
+/* Hand Area */
+.hand {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    min-height: 190px;
+    align-items: flex-end;
+    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.4));
+    border-top: 1px solid var(--border-subtle);
+}
+
+.hand--empty {
+    justify-content: center;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+}
+
+/* Turn Controls */
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px;
+}
+
+/* Game Log */
+.game-log {
+    position: fixed;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 250px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    z-index: 50;
+}
+
+.game-log__title {
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    color: var(--cyan);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.game-log__entry {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.game-log__entry:last-child {
+    border-bottom: none;
+}
+
+.game-log__entry--attack {
+    color: var(--orange);
+}
+
+.game-log__entry--death {
+    color: var(--red);
+}
+
+.game-log__entry--summon {
+    color: var(--green);
+}
+
+.game-log__entry--buff {
+    color: var(--cyan);
+}
+
+.game-log__entry--hack {
+    color: var(--magenta);
+}
+
+.game-log__entry--heal {
+    color: var(--green);
+}
+
+/* Victory Screen */
+.victory-screen {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    z-index: 100;
+    animation: fadeIn 0.5s ease;
+}
+
+.victory-screen__title {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 900;
+}
+
+.victory-screen__title--win {
+    color: var(--cyan);
+    text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan), 0 0 80px var(--cyan);
+}
+
+.victory-screen__title--lose {
+    color: var(--red);
+    text-shadow: 0 0 20px var(--red), 0 0 40px var(--red);
+}
+
+.victory-screen__subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+}

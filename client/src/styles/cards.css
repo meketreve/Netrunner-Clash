@@ -1,0 +1,321 @@
+/* ============================================ */
+/* CARD COMPONENT STYLES                        */
+/* ============================================ */
+
+.card {
+    width: 120px;
+    height: 170px;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 2px solid var(--border-subtle);
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition-normal);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-body);
+    user-select: none;
+    flex-shrink: 0;
+}
+
+.card:hover {
+    transform: translateY(-8px) scale(1.05);
+    z-index: 10;
+}
+
+.card--selected {
+    border-color: var(--yellow) !important;
+    box-shadow: 0 0 20px rgba(240, 224, 0, 0.5), 0 0 40px rgba(240, 224, 0, 0.2) !important;
+    transform: translateY(-12px) scale(1.08);
+    z-index: 11;
+}
+
+.card--target {
+    border-color: var(--red) !important;
+    box-shadow: 0 0 20px rgba(255, 34, 68, 0.5) !important;
+    animation: glow-pulse 1s infinite;
+}
+
+.card--disabled {
+    opacity: 0.5;
+    filter: grayscale(0.5);
+    cursor: not-allowed;
+}
+
+.card--disabled:hover {
+    transform: none;
+}
+
+.card--in-hand:hover {
+    transform: translateY(-20px) scale(1.15);
+}
+
+.card--on-field {
+    width: 100px;
+    height: 140px;
+}
+
+.card--on-field:hover {
+    transform: translateY(-4px) scale(1.05);
+}
+
+.card--type-character .card__header {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 240, 255, 0.05));
+}
+
+.card--type-buff .card__header {
+    background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 255, 136, 0.05));
+}
+
+.card--type-hack .card__header {
+    background: linear-gradient(135deg, rgba(255, 0, 170, 0.2), rgba(255, 0, 170, 0.05));
+}
+
+/* Card Cost Badge */
+.card__cost {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    width: 24px;
+    height: 24px;
+    background: var(--bg-deep);
+    border: 2px solid var(--yellow);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--yellow);
+    z-index: 2;
+}
+
+/* Card Header */
+.card__header {
+    padding: 4px 6px;
+    padding-left: 22px;
+}
+
+.card__name {
+    font-family: var(--font-display);
+    font-size: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+}
+
+/* Card Art Area */
+.card__art {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.card__art::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(transparent, var(--bg-card));
+}
+
+/* Card Body */
+.card__body {
+    flex: 1;
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.card__description {
+    font-size: 0.45rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    flex: 1;
+}
+
+.card__keywords {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.card__keyword {
+    font-size: 0.4rem;
+    padding: 1px 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--cyan);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Card Footer (ATK / HP) */
+.card__footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 6px;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.card__stat {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.card__stat--atk {
+    color: var(--orange);
+}
+
+.card__stat--hp {
+    color: var(--green);
+}
+
+.card__stat--hp-damaged {
+    color: var(--red);
+}
+
+/* Shield / Drain / Stealth indicators */
+.card__status-icons {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    display: flex;
+    gap: 2px;
+    z-index: 2;
+}
+
+.card__status-icon {
+    font-size: 0.6rem;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+}
+
+/* Tooltip */
+.card__tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-deep);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    min-width: 200px;
+    z-index: 100;
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+}
+
+.card:hover .card__tooltip {
+    display: block;
+    animation: fadeIn 0.2s ease;
+}
+
+.card__tooltip-name {
+    font-family: var(--font-display);
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.card__tooltip-desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.card__tooltip-flavor {
+    font-size: 0.65rem;
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+/* Attack animation */
+@keyframes card-attack {
+    0% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-20px) scale(1.1);
+    }
+
+    60% {
+        transform: translateY(10px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.card--attacking {
+    animation: card-attack 0.4s ease;
+}
+
+/* Death animation */
+@keyframes card-death {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.1);
+        filter: hue-rotate(90deg);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.5) rotate(10deg);
+    }
+}
+
+.card--dying {
+    animation: card-death 0.5s ease forwards;
+}
+
+/* Summon animation */
+@keyframes card-summon {
+    0% {
+        opacity: 0;
+        transform: scale(0.3) translateY(30px);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.1) translateY(-5px);
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+    }
+}
+
+.card--summoning {
+    animation: card-summon 0.4s ease;
+}
