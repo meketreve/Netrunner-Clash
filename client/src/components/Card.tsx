@@ -17,7 +17,7 @@ interface CardProps {
     isTarget?: boolean;
     isDisabled?: boolean;
     animationClass?: string;
-    location?: 'hand' | 'field' | 'graveyard';
+    location?: 'hand' | 'field' | 'graveyard' | 'collection';
     onClick?: () => void;
     className?: string;
 }
