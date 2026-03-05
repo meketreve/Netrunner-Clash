@@ -5,6 +5,7 @@
 import spacetimedb from './schema.js';
 import { t } from 'spacetimedb/server';
 import { DEFAULT_DECK, getCardDef } from './cards.js';
+import { logEvent, getOpponent } from './game-utils.js';
 
 // ============================================================
 // Register / Update Player
@@ -104,10 +105,10 @@ export const joinQueue = spacetimedb.reducer((ctx) => {
             phase: 'main',
             p1Hp: 20,
             p2Hp: 20,
-            p1Energy: 1,
-            p2Energy: 0,
-            p1MaxEnergy: 1,
-            p2MaxEnergy: 0,
+            p1Energy: 3,
+            p2Energy: 3,
+            p1MaxEnergy: 3,
+            p2MaxEnergy: 3,
             status: 'active',
             winnerId: '',
         });
@@ -135,6 +136,49 @@ export const leaveQueue = spacetimedb.reducer((ctx) => {
     const player = ctx.db.player.identity.find(ctx.sender);
     if (!player) throw new Error('Player not registered');
     ctx.db.player.identity.update({ ...player, isInQueue: false });
+});
+
+// ============================================================
+// Connection Hooks
+// ============================================================
+
+export const clientDisconnected = spacetimedb.clientDisconnected((ctx) => {
+    const player = ctx.db.player.identity.find(ctx.sender);
+    if (!player) return;
+
+    // Mark player offline and remove from queue
+    ctx.db.player.identity.update({ ...player, isOnline: false, isInQueue: false });
+
+    // Handle active games: forfeit immediately
+    for (const game of ctx.db.game.iter()) {
+        if (game.status === 'active') {
+            const p1Hex = game.player1.toHexString();
+            const p2Hex = game.player2.toHexString();
+            const senderHex = ctx.sender.toHexString();
+
+            if (p1Hex === senderHex || p2Hex === senderHex) {
+                const opponentIdentity = p1Hex === senderHex ? game.player2 : game.player1;
+
+                // End game
+                ctx.db.game.id.update({
+                    ...game,
+                    status: 'finished',
+                    winnerId: opponentIdentity.toHexString(),
+                });
+
+                // ANTI-FARMING RULES: 
+                // 1. Disconnected player gets +1 LOSS
+                // 2. Opponent STAYS with same WINS (doesn't gain)
+                const loser = ctx.db.player.identity.find(ctx.sender);
+                if (loser) {
+                    ctx.db.player.identity.update({ ...loser, losses: loser.losses + 1 });
+                }
+
+                logEvent(ctx, game.id, game.turnNumber, 'game_end',
+                    `Partida finalizada por desconexão. ${player.name} desconectou.`);
+            }
+        }
+    }
 });
 
 // ============================================================

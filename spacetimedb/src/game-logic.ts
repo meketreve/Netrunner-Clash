@@ -7,16 +7,11 @@ import spacetimedb from './schema.js';
 import { t } from 'spacetimedb/server';
 import { getCardDef } from './cards.js';
 import { drawCards } from './matchmaking.js';
+import { updatePlayerStats, logEvent, getOpponent, getGame } from './game-utils.js';
 
 // ============================================================
 // Helpers
 // ============================================================
-function getGame(ctx: any, gameId: bigint) {
-    for (const g of ctx.db.game.iter()) {
-        if (g.id === gameId) return g;
-    }
-    throw new Error('Game not found');
-}
 
 function isMyTurn(ctx: any, game: any) {
     if (game.currentTurn.toHexString() !== ctx.sender.toHexString()) {
@@ -57,11 +52,6 @@ function getFieldCards(ctx: any, gameId: bigint, ownerHex: string) {
     return cards;
 }
 
-function getOpponent(game: any, playerHex: string) {
-    return playerHex === game.player1.toHexString()
-        ? game.player2
-        : game.player1;
-}
 
 function getOpponentHp(game: any, playerHex: string): number {
     return playerHex === game.player1.toHexString() ? game.p2Hp : game.p1Hp;
@@ -103,28 +93,7 @@ function checkWinCondition(ctx: any, game: any): any {
     return updatedGame;
 }
 
-function updatePlayerStats(ctx: any, winner: any, loser: any) {
-    const w = ctx.db.player.identity.find(winner);
-    const l = ctx.db.player.identity.find(loser);
-    if (w) ctx.db.player.identity.update({ ...w, wins: w.wins + 1 });
-    if (l) ctx.db.player.identity.update({ ...l, losses: l.losses + 1 });
-}
 
-function logEvent(
-    ctx: any,
-    gameId: bigint,
-    turn: number,
-    eventType: string,
-    message: string
-) {
-    ctx.db.gameLog.insert({
-        id: 0n,
-        gameId,
-        turn,
-        eventType,
-        message,
-    });
-}
 
 // ============================================================
 // REDUCER: Play a character card from hand to field
