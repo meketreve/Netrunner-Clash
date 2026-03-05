@@ -80,13 +80,7 @@ function Lobby() {
         <div className="game-page">
             <div className="lobby">
                 <div className="lobby__header">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <Link href="/">
-                            <button className="cyber-btn cyber-btn--small">🏠 VOLTAR</button>
-                        </Link>
-                        <h1 className="lobby__title" style={{ margin: 0 }}>NETRUNNER CLASH</h1>
-                        <div style={{ width: '80px' }}></div> {/* Spacer for symmetry */}
-                    </div>
+                    <h1 className="lobby__title">NETRUNNER CLASH</h1>
                     <p className="lobby__subtitle">
                         {spacetime.isActive ? '🟢 Conectado ao servidor' : '🔴 Conectando...'}
                     </p>
@@ -142,9 +136,16 @@ function Lobby() {
 
                 <div className="lobby__actions">
                     {!isInQueue ? (
-                        <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive}>
-                            ⚔️ BUSCAR PARTIDA
-                        </button>
+                        <>
+                            <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive}>
+                                ⚔️ BUSCAR PARTIDA
+                            </button>
+                            <Link href="/" style={{ width: '100%', maxWidth: '300px' }}>
+                                <button className="cyber-btn cyber-btn--large cyber-btn--red" style={{ width: '100%' }}>
+                                    🏠 VOLTAR AO MENU
+                                </button>
+                            </Link>
+                        </>
                     ) : (
                         <div className="lobby__queue">
                             <div className="lobby__queue-spinner" />
