@@ -23,6 +23,13 @@ function Lobby() {
     const conn = spacetime.getConnection() as DbConnection | null;
     const myIdentity = spacetime.identity?.toHexString() || '';
 
+    // ⚡ Auto-register player on connection
+    useEffect(() => {
+        if (spacetime.isActive && conn) {
+            conn.reducers.registerPlayer({});
+        }
+    }, [spacetime.isActive, conn]);
+
     const [allPlayers] = useTable(tables.player);
     const [allGames] = useTable(tables.game);
 
