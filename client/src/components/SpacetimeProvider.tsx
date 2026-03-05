@@ -24,16 +24,16 @@ export default function SpacetimeProvider({ children }: { children: React.ReactN
                     .onApplied(() => {
                         console.log('[SpacetimeDB] 📡 Subscription applied — tables are now synced');
                     })
-                    .onError((_ctx: unknown, err: unknown) => {
-                        console.error('[SpacetimeDB] ❌ Subscription error:', err);
+                    .onError((ctx: any) => {
+                        console.error('[SpacetimeDB] ❌ Subscription error:', ctx.error || ctx);
                     })
                     .subscribeToAllTables();
             })
-            .onDisconnect((_ctx, error) => {
-                console.log('[SpacetimeDB] 🔌 Disconnected', error || '');
+            .onDisconnect((ctx: any) => {
+                console.log('[SpacetimeDB] 🔌 Disconnected', ctx.error || '');
             })
-            .onConnectError((_ctx, err) => {
-                console.error('[SpacetimeDB] ❌ Connection error:', err);
+            .onConnectError((ctx: any) => {
+                console.error('[SpacetimeDB] ❌ Connection error:', ctx.error || ctx);
             });
 
         // Restore token if previously stored
