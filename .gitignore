@@ -29,5 +29,5 @@ Thumbs.db
 .vscode/
 .idea/
 
-# SpacetimeDB generated bindings (regenerated via spacetime generate)
-client/src/module_bindings/
+# SpacetimeDB generated bindings (Vercel needs these to build)
+# client/src/module_bindings/
