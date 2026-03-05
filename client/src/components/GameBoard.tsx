@@ -22,10 +22,12 @@ function Lobby() {
     const { data: session } = useSession();
     const conn = spacetime.getConnection() as DbConnection | null;
     const myIdentity = spacetime.identity?.toHexString() || '';
+    const hasRegistered = React.useRef(false);
 
-    // ⚡ Auto-register player on connection
+    // ⚡ Auto-register player ONCE on connection
     useEffect(() => {
-        if (spacetime.isActive && conn) {
+        if (spacetime.isActive && conn && !hasRegistered.current) {
+            hasRegistered.current = true;
             conn.reducers.registerPlayer({});
         }
     }, [spacetime.isActive, conn]);
@@ -80,12 +82,7 @@ function Lobby() {
         return <GameBoard game={activeGame} myIdentity={myIdentity} />;
     }
 
-    const handleJoinQueue = () => {
-        // Always register first (idempotent), then join queue
-        conn?.reducers.registerPlayer({});
-        // Small delay to ensure registration completes before joining queue
-        setTimeout(() => conn?.reducers.joinQueue({}), 300);
-    };
+    const handleJoinQueue = () => conn?.reducers.joinQueue({});
     const handleLeaveQueue = () => conn?.reducers.leaveQueue({});
 
     return (
