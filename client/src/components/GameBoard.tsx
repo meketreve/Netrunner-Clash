@@ -8,6 +8,7 @@ import { tables, type DbConnection } from '@/module_bindings';
 import type { Game, CardInstance, GameLog, Player } from '@/module_bindings/types';
 import Card from './Card';
 import TutorialSystem from './TutorialSystem';
+import { useToast } from './GameToast';
 import { getCardVisual } from '@/lib/card-data';
 import { useGameAnimations } from '@/lib/useGameAnimations';
 import '@/styles/cards.css';
@@ -25,13 +26,6 @@ function Lobby() {
 
     const [allPlayers] = useTable(tables.player);
     const [allGames] = useTable(tables.game);
-
-    // Debug: log player data to help diagnose registration issues
-    useEffect(() => {
-        console.log('[DEBUG] myIdentity:', myIdentity);
-        console.log('[DEBUG] allPlayers count:', allPlayers.length);
-        console.log('[DEBUG] allPlayers identities:', allPlayers.map((p: Player) => p.identity.toHexString()));
-    }, [myIdentity, allPlayers]);
 
     const myPlayer = allPlayers.find((p: Player) => p.identity.toHexString() === myIdentity);
     const isInQueue = myPlayer?.isInQueue ?? false;
@@ -180,6 +174,7 @@ function Lobby() {
 function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
     const spacetime = useSpacetimeDB();
     const conn = spacetime.getConnection() as DbConnection | null;
+    const { showGameError } = useToast();
 
     const [allCards] = useTable(tables.cardInstance);
     const [allLogs] = useTable(tables.gameLog);
@@ -220,44 +215,53 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
         [gameCards, myIdentity]);
 
     // ============================================================
-    // ACTIONS — Call real SpacetimeDB reducers
+    // ACTIONS — Call real SpacetimeDB reducers with error handling
     // ============================================================
 
+    // Wrapper to catch SpacetimeDB reducer errors and show as toast
+    const safeCall = useCallback((fn: () => void) => {
+        try {
+            fn();
+        } catch (err: any) {
+            showGameError(err?.message || String(err));
+        }
+    }, [showGameError]);
+
     const handlePlayCard = useCallback((cardId: bigint, slot: number) => {
-        conn?.reducers.playCard({ gameId: game.id, cardInstanceId: cardId, slot });
+        safeCall(() => conn?.reducers.playCard({ gameId: game.id, cardInstanceId: cardId, slot }));
         setSelectedCardId(null);
         setTargetMode('none');
-    }, [conn, game.id]);
+    }, [conn, game.id, safeCall]);
 
     const handleAttack = useCallback((attackerId: bigint, targetId: bigint) => {
-        conn?.reducers.attack({ gameId: game.id, attackerId, targetId });
+        safeCall(() => conn?.reducers.attack({ gameId: game.id, attackerId, targetId }));
         setSelectedCardId(null);
         setTargetMode('none');
-    }, [conn, game.id]);
+    }, [conn, game.id, safeCall]);
 
     const handleEndPhase = useCallback(() => {
-        conn?.reducers.endPhase({ gameId: game.id });
-    }, [conn, game.id]);
+        safeCall(() => conn?.reducers.endPhase({ gameId: game.id }));
+    }, [conn, game.id, safeCall]);
 
     const handleEndTurn = useCallback(() => {
-        conn?.reducers.endTurn({ gameId: game.id });
-    }, [conn, game.id]);
+        safeCall(() => conn?.reducers.endTurn({ gameId: game.id }));
+    }, [conn, game.id, safeCall]);
 
     const handleForfeit = useCallback(() => {
-        conn?.reducers.forfeit({ gameId: game.id });
-    }, [conn, game.id]);
+        safeCall(() => conn?.reducers.forfeit({ gameId: game.id }));
+    }, [conn, game.id, safeCall]);
 
     const handleUseHack = useCallback((cardId: bigint, targetId: bigint) => {
-        conn?.reducers.useHack({ gameId: game.id, cardInstanceId: cardId, targetId });
+        safeCall(() => conn?.reducers.useHack({ gameId: game.id, cardInstanceId: cardId, targetId }));
         setSelectedCardId(null);
         setTargetMode('none');
-    }, [conn, game.id]);
+    }, [conn, game.id, safeCall]);
 
     const handleApplyBuff = useCallback((buffCardId: bigint, targetId: bigint) => {
-        conn?.reducers.applyBuff({ gameId: game.id, buffCardId, targetId });
+        safeCall(() => conn?.reducers.applyBuff({ gameId: game.id, buffCardId, targetId }));
         setSelectedCardId(null);
         setTargetMode('none');
-    }, [conn, game.id]);
+    }, [conn, game.id, safeCall]);
 
     // Card click handlers
     const handleCardClick = useCallback((card: CardInstance) => {
