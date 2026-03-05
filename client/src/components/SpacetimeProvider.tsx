@@ -17,8 +17,7 @@ export default function SpacetimeProvider({ children }: { children: React.ReactN
             .onConnect((conn, identity, token) => {
                 console.log('[SpacetimeDB] ✅ Connected as:', identity.toHexString());
                 storeToken(token);
-                // Register the player automatically
-                conn.reducers.registerPlayer({});
+                // Player is auto-registered by the server via clientConnected hook
                 // Subscribe to all tables — REQUIRED for useTable to receive data
                 conn.subscriptionBuilder()
                     .onApplied(() => {

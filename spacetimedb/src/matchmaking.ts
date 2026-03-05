@@ -146,6 +146,31 @@ export const leaveQueue = spacetimedb.reducer((ctx) => {
 // Connection Hooks
 // ============================================================
 
+export const clientConnected = spacetimedb.clientConnected((ctx: any) => {
+    const existing = ctx.db.player.identity.find(ctx.sender);
+    if (existing) {
+        // Returning player — mark online
+        if (!existing.isOnline) {
+            ctx.db.player.identity.update({ ...existing, isOnline: true });
+        }
+        return;
+    }
+
+    // New player — auto-register
+    ctx.db.player.insert({
+        identity: ctx.sender,
+        name: `Netrunner_${ctx.sender.toHexString().slice(0, 6)}`,
+        googleId: '',
+        email: '',
+        picture: '',
+        isOnline: true,
+        isInQueue: false,
+        wins: 0,
+        losses: 0,
+        tutorialCompleted: false,
+    });
+});
+
 export const clientDisconnected = spacetimedb.clientDisconnected((ctx) => {
     const player = ctx.db.player.identity.find(ctx.sender);
     if (!player) return;

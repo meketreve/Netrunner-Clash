@@ -10,7 +10,7 @@
 export { default } from './schema.js';
 
 // Matchmaking reducers
-export { registerPlayer, setPlayerName, updateProfile, completeTutorial, joinQueue, leaveQueue } from './matchmaking.js';
+export { registerPlayer, setPlayerName, updateProfile, completeTutorial, joinQueue, leaveQueue, clientConnected, clientDisconnected } from './matchmaking.js';
 
 // Game logic reducers
 export { playCard, attack, useHack, applyBuff, endPhase, endTurn, forfeit } from './game-logic.js';

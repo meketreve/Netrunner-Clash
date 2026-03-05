@@ -12,7 +12,7 @@ const spacetimedb: any = schema({
         {
             identity: t.identity().primaryKey(),
             name: t.string(),
-            googleId: t.string().unique(), // unique Google ID
+            googleId: t.string(), // Google ID (not unique since empty string is default)
             email: t.string(),
             picture: t.string(),
             isOnline: t.bool(),

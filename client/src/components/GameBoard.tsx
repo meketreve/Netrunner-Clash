@@ -22,18 +22,16 @@ function Lobby() {
     const { data: session } = useSession();
     const conn = spacetime.getConnection() as DbConnection | null;
     const myIdentity = spacetime.identity?.toHexString() || '';
-    const hasRegistered = React.useRef(false);
-
-    // ⚡ Auto-register player ONCE on connection
-    useEffect(() => {
-        if (spacetime.isActive && conn && !hasRegistered.current) {
-            hasRegistered.current = true;
-            conn.reducers.registerPlayer({});
-        }
-    }, [spacetime.isActive, conn]);
 
     const [allPlayers] = useTable(tables.player);
     const [allGames] = useTable(tables.game);
+
+    // Debug: log player data to help diagnose registration issues
+    useEffect(() => {
+        console.log('[DEBUG] myIdentity:', myIdentity);
+        console.log('[DEBUG] allPlayers count:', allPlayers.length);
+        console.log('[DEBUG] allPlayers identities:', allPlayers.map((p: Player) => p.identity.toHexString()));
+    }, [myIdentity, allPlayers]);
 
     const myPlayer = allPlayers.find((p: Player) => p.identity.toHexString() === myIdentity);
     const isInQueue = myPlayer?.isInQueue ?? false;
