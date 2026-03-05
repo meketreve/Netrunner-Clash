@@ -7,6 +7,7 @@ import { tables, type DbConnection } from '@/module_bindings';
 import type { Game, CardInstance, GameLog, Player } from '@/module_bindings/types';
 import Card from './Card';
 import TutorialSystem from './TutorialSystem';
+import CollectionScreen from './CollectionScreen';
 import { getCardVisual } from '@/lib/card-data';
 import { useGameAnimations } from '@/lib/useGameAnimations';
 import '@/styles/cards.css';
@@ -16,7 +17,11 @@ import '@/styles/game.css';
 // LOBBY COMPONENT — Matchmaking
 // ============================================================
 
-function Lobby() {
+interface LobbyProps {
+    onViewCollection: () => void;
+}
+
+function Lobby({ onViewCollection }: LobbyProps) {
     const spacetime = useSpacetimeDB();
     const { data: session } = useSession();
     const conn = spacetime.getConnection() as DbConnection | null;
@@ -135,9 +140,14 @@ function Lobby() {
 
                 <div className="lobby__actions">
                     {!isInQueue ? (
-                        <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive}>
-                            ⚔️ BUSCAR PARTIDA
-                        </button>
+                        <>
+                            <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive}>
+                                ⚔️ BUSCAR PARTIDA
+                            </button>
+                            <button className="cyber-btn cyber-btn--large cyber-btn--magenta" onClick={onViewCollection}>
+                                📚 COLEÇÃO
+                            </button>
+                        </>
                     ) : (
                         <div className="lobby__queue">
                             <div className="lobby__queue-spinner" />
@@ -512,10 +522,15 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
     );
 }
 
-// ============================================================
-// MAIN EXPORT — Shows Lobby or Game
+// MAIN EXPORT — Shows Lobby, Game, or Collection
 // ============================================================
 
 export default function GamePage() {
-    return <Lobby />;
+    const [view, setView] = useState<'lobby' | 'collection'>('lobby');
+
+    if (view === 'collection') {
+        return <CollectionScreen onBack={() => setView('lobby')} />;
+    }
+
+    return <Lobby onViewCollection={() => setView('collection')} />;
 }
