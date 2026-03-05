@@ -92,15 +92,16 @@ export default function HomePage() {
           </button>
         </Link>
 
-        <button
-          className="cyber-btn cyber-btn--magenta"
-          style={{ width: '100%', padding: '16px 32px', fontSize: '1rem' }}
-          onMouseEnter={() => setHoveredBtn('collection')}
-          onMouseLeave={() => setHoveredBtn(null)}
-          disabled
-        >
-          📦 COLEÇÃO <span style={{ fontSize: '0.6rem', opacity: 0.5 }}>(EM BREVE)</span>
-        </button>
+        <Link href="/collection" style={{ textDecoration: 'none' }}>
+          <button
+            className="cyber-btn cyber-btn--magenta"
+            style={{ width: '100%', padding: '16px 32px', fontSize: '1rem' }}
+            onMouseEnter={() => setHoveredBtn('collection')}
+            onMouseLeave={() => setHoveredBtn(null)}
+          >
+            📦 COLEÇÃO
+          </button>
+        </Link>
 
         <button
           className="cyber-btn"
