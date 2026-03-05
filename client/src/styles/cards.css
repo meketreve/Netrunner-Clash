@@ -229,6 +229,35 @@
     background: linear-gradient(transparent, var(--bg-card));
 }
 
+/* Tech-Grid Overlay */
+.card__grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+    background-size: 8px 8px;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.card--large .card__grid-overlay {
+    background-size: 12px 12px;
+    opacity: 0.6;
+}
+
+/* Interactive Grid Glow */
+.card:hover .card__grid-overlay {
+    opacity: 0.8;
+    background-image:
+        linear-gradient(rgba(0, 240, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.1) 1px, transparent 1px);
+}
+
 /* Card Body */
 .card__body {
     flex: 1;

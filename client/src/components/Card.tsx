@@ -75,6 +75,9 @@ export default function Card({
             onClick={isDisabled ? undefined : onClick}
             style={{ borderColor: isSelected || isTarget ? undefined : card.color + '60' }}
         >
+            {/* Background Grid Texture */}
+            <div className="card__grid-overlay" />
+
             {/* Cost badge */}
             <div className="card__cost">{card.cost}</div>
 
