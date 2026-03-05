@@ -80,7 +80,12 @@ function Lobby() {
         return <GameBoard game={activeGame} myIdentity={myIdentity} />;
     }
 
-    const handleJoinQueue = () => conn?.reducers.joinQueue({});
+    const handleJoinQueue = () => {
+        // Always register first (idempotent), then join queue
+        conn?.reducers.registerPlayer({});
+        // Small delay to ensure registration completes before joining queue
+        setTimeout(() => conn?.reducers.joinQueue({}), 300);
+    };
     const handleLeaveQueue = () => conn?.reducers.leaveQueue({});
 
     return (
@@ -144,8 +149,8 @@ function Lobby() {
                 <div className="lobby__actions">
                     {!isInQueue ? (
                         <>
-                            <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive}>
-                                ⚔️ BUSCAR PARTIDA
+                            <button className="cyber-btn cyber-btn--large" onClick={handleJoinQueue} disabled={!spacetime.isActive || !myPlayer}>
+                                {!myPlayer ? '🔄 REGISTRANDO...' : '⚔️ BUSCAR PARTIDA'}
                             </button>
                             <Link href="/" style={{ width: '100%', maxWidth: '300px' }}>
                                 <button className="cyber-btn cyber-btn--large cyber-btn--red" style={{ width: '100%' }}>
