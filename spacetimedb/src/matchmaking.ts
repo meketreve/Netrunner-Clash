@@ -20,18 +20,22 @@ export const registerPlayer = spacetimedb.reducer((ctx) => {
         return;
     }
 
-    ctx.db.player.insert({
-        identity: ctx.sender,
-        name: `Netrunner_${ctx.sender.toHexString().slice(0, 6)}`,
-        googleId: '',
-        email: '',
-        picture: '',
-        isOnline: true,
-        isInQueue: false,
-        wins: 0,
-        losses: 0,
-        tutorialCompleted: false,
-    });
+    try {
+        ctx.db.player.insert({
+            identity: ctx.sender,
+            name: `Netrunner_${ctx.sender.toHexString().slice(0, 6)}`,
+            googleId: '',
+            email: '',
+            picture: '',
+            isOnline: true,
+            isInQueue: false,
+            wins: 0,
+            losses: 0,
+            tutorialCompleted: false,
+        });
+    } catch (_e) {
+        // Player was already inserted by a concurrent call — safe to ignore
+    }
 });
 
 export const updateProfile = spacetimedb.reducer(
