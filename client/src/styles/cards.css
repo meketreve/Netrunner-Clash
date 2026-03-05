@@ -22,6 +22,7 @@
 .card:hover {
     transform: translateY(-8px) scale(1.05);
     z-index: 10;
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
 }
 
 .card--selected {
@@ -58,6 +59,104 @@
 
 .card--on-field:hover {
     transform: translateY(-4px) scale(1.05);
+}
+
+/* Collection / Large Variant */
+.card--large {
+    width: 220px;
+    height: 310px;
+    border-width: 3px;
+    font-size: 1.2rem;
+}
+
+.card--large .card__cost {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+    top: -8px;
+    left: -8px;
+}
+
+.card--large .card__name {
+    font-size: 0.8rem;
+}
+
+.card--large .card__art {
+    height: 120px;
+    font-size: 4rem;
+}
+
+.card--large .card__description {
+    font-size: 0.7rem;
+}
+
+.card--large .card__stat {
+    font-size: 1rem;
+}
+
+/* Holographic Effect for Collection */
+.card--large::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.05) 45%,
+            rgba(255, 255, 255, 0.2) 50%,
+            rgba(255, 255, 255, 0.05) 55%,
+            rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 200%;
+    z-index: 5;
+    pointer-events: none;
+    animation: holo-shine 4s ease infinite;
+}
+
+@keyframes holo-shine {
+    0% {
+        background-position: -100% -100%;
+    }
+
+    100% {
+        background-position: 200% 200%;
+    }
+}
+
+/* Scanning Line Effect */
+.card--large::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: rgba(0, 240, 255, 0.3);
+    box-shadow: 0 0 10px var(--cyan);
+    z-index: 6;
+    pointer-events: none;
+    animation: scan-line 3s linear infinite;
+}
+
+@keyframes scan-line {
+    0% {
+        top: 0;
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    95% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0;
+    }
 }
 
 .card--type-character .card__header {

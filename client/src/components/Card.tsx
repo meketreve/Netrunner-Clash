@@ -18,6 +18,7 @@ interface CardProps {
     isDisabled?: boolean;
     animationClass?: string;
     location?: 'hand' | 'field' | 'graveyard' | 'collection';
+    size?: 'small' | 'medium' | 'large';
     onClick?: () => void;
     className?: string;
 }
@@ -43,6 +44,7 @@ export default function Card({
     isDisabled = false,
     animationClass = '',
     location = 'hand',
+    size = 'medium',
     onClick,
     className = '',
 }: CardProps) {
@@ -59,6 +61,7 @@ export default function Card({
         `card--type-${card.type}`,
         location === 'hand' ? 'card--in-hand' : '',
         location === 'field' ? 'card--on-field' : '',
+        size === 'large' ? 'card--large' : '',
         isSelected ? 'card--selected' : '',
         isTarget ? 'card--target' : '',
         isDisabled ? 'card--disabled' : '',

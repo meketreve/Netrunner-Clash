@@ -82,6 +82,7 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
                                 currentAtk={card.atk}
                                 currentHp={card.hp}
                                 location="collection"
+                                size="large"
                             />
                             <div className="collection-screen__card-flavor">
                                 "{card.flavor}"
