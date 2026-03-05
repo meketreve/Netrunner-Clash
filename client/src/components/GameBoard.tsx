@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import { tables, type DbConnection } from '@/module_bindings';
 import type { Game, CardInstance, GameLog, Player } from '@/module_bindings/types';
 import Card from './Card';
+import TutorialSystem from './TutorialSystem';
 import { getCardVisual } from '@/lib/card-data';
+import { useGameAnimations } from '@/lib/useGameAnimations';
 import '@/styles/cards.css';
 import '@/styles/game.css';
 
@@ -15,6 +18,7 @@ import '@/styles/game.css';
 
 function Lobby() {
     const spacetime = useSpacetimeDB();
+    const { data: session } = useSession();
     const conn = spacetime.getConnection() as DbConnection | null;
     const myIdentity = spacetime.identity?.toHexString() || '';
 
@@ -23,6 +27,40 @@ function Lobby() {
 
     const myPlayer = allPlayers.find((p: Player) => p.identity.toHexString() === myIdentity);
     const isInQueue = myPlayer?.isInQueue ?? false;
+
+    // Leaderboard logic
+    const topPlayers = useMemo(() =>
+        [...allPlayers]
+            .sort((a, b) => b.wins - a.wins)
+            .slice(0, 5),
+        [allPlayers]
+    );
+
+    const [showTutorial, setShowTutorial] = useState(false);
+
+    // Sync Google Session with SpacetimeDB
+    useEffect(() => {
+        if (session?.user && myPlayer && !myPlayer.googleId) {
+            (conn as any)?.reducers.updateProfile({
+                name: session.user.name || myPlayer.name,
+                googleId: session.user.id || '',
+                email: session.user.email || '',
+                picture: session.user.image || ''
+            });
+        }
+    }, [session, myPlayer, conn]);
+
+    // Check for tutorial
+    useEffect(() => {
+        if (myPlayer && !myPlayer.tutorialCompleted) {
+            setShowTutorial(true);
+        }
+    }, [myPlayer]);
+
+    const handleTutorialComplete = () => {
+        (conn as any)?.reducers.completeTutorial({});
+        setShowTutorial(false);
+    };
 
     // Check if we have an active game
     const activeGame = allGames.find((g: Game) =>
@@ -47,6 +85,19 @@ function Lobby() {
                     </p>
                 </div>
 
+                {!session ? (
+                    <button className="google-btn" onClick={() => signIn('google')}>
+                        <img src="https://authjs.dev/img/providers/google.svg" className="google-btn__icon" alt="Google" />
+                        Acessar com Google
+                    </button>
+                ) : (
+                    <div className="lobby__user-brief" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img src={session.user?.image || ''} className="leaderboard__avatar" alt="Profile" />
+                        <span style={{ fontSize: '0.8rem' }}>{session.user?.name}</span>
+                        <button className="cyber-btn cyber-btn--small" onClick={() => signOut()}>SAIR</button>
+                    </div>
+                )}
+
                 {myPlayer && (
                     <div className="lobby__stats">
                         <div className="lobby__stat">
@@ -63,6 +114,24 @@ function Lobby() {
                         </div>
                     </div>
                 )}
+
+                <div className="lobby__social">
+                    <div className="leaderboard">
+                        <div className="leaderboard__title">🏆 Top Hackers</div>
+                        <div className="leaderboard__list">
+                            {topPlayers.map((player: Player, index: number) => (
+                                <div key={player.identity.toHexString()} className="leaderboard__item">
+                                    <span className={`leaderboard__rank leaderboard__rank--${index + 1}`}>#{index + 1}</span>
+                                    <img src={player.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.name}`} className="leaderboard__avatar" alt="" />
+                                    <span className="leaderboard__name">{player.name}</span>
+                                    <span className="leaderboard__wins">{player.wins} v</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {showTutorial && <TutorialSystem onComplete={handleTutorialComplete} />}
 
                 <div className="lobby__actions">
                     {!isInQueue ? (
@@ -103,9 +172,12 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
     const [selectedCardId, setSelectedCardId] = useState<bigint | null>(null);
     const [targetMode, setTargetMode] = useState<'none' | 'attack' | 'buff' | 'hack'>('none');
 
-    // Filter data for this game
+    // Animation system
     const gameCards = useMemo(() =>
         allCards.filter((c: CardInstance) => c.gameId === game.id), [allCards, game.id]);
+    const { getCardAnimation, playerDamage } = useGameAnimations(gameCards, game, myIdentity);
+
+    // Filter data for this game
     const gameLogs = useMemo(() =>
         allLogs.filter((l: GameLog) => l.gameId === game.id), [allLogs, game.id]);
 
@@ -272,6 +344,7 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
                             tempAtkBuff={card.tempAtkBuff}
                             isSelected={selectedCardId === card.id}
                             isTarget={targetMode === 'attack' && card.owner.toHexString() !== myIdentity}
+                            animationClass={getCardAnimation(card.id)}
                             location="field"
                             onClick={() => handleCardClick(card)}
                         />
@@ -302,7 +375,7 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
                 </div>
 
                 {/* Opponent Info */}
-                <div className={`player-info player-info--opponent ${!isMyTurn ? 'player-info--active' : ''}`}>
+                <div className={`player-info player-info--opponent ${!isMyTurn ? 'player-info--active' : ''} ${playerDamage?.target === 'opponent' && playerDamage.type === 'damage' ? 'player-info--damage-shake' : ''} ${playerDamage?.target === 'opponent' && playerDamage.type === 'heal' ? 'player-info--heal-glow' : ''}`} style={{ position: 'relative' }}>
                     <div className="player-info__name" style={{ color: 'var(--magenta)' }}>OPONENTE</div>
                     <div className="player-info__hp">
                         <div className="player-info__hp-bar"
@@ -335,7 +408,7 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
                 </div>
 
                 {/* Player Info */}
-                <div className={`player-info ${isMyTurn ? 'player-info--active' : ''}`}>
+                <div className={`player-info ${isMyTurn ? 'player-info--active' : ''} ${playerDamage?.target === 'me' && playerDamage.type === 'damage' ? 'player-info--damage-shake' : ''} ${playerDamage?.target === 'me' && playerDamage.type === 'heal' ? 'player-info--heal-glow' : ''}`} style={{ position: 'relative' }}>
                     <div className="player-info__name" style={{ color: 'var(--cyan)' }}>VOCÊ</div>
                     <div className="player-info__hp">
                         <div className="player-info__hp-bar">
@@ -406,10 +479,24 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
                     </h1>
                     <p className="victory-screen__subtitle">
                         {isWinner
-                            ? 'O netrunner inimigo foi desconectado.'
-                            : 'Sua conexão foi terminada.'}
+                            ? 'O netrunner inimigo foi desconectado (ou derrotado).'
+                            : 'Sua conexão foi terminada (ou você foi derrotado).'}
                     </p>
-                    <a href="/" className="cyber-btn">
+
+                    <div className="victory-screen__stats">
+                        <div className="victory-screen__stat">
+                            <span className="victory-screen__stat-value">{game.turnNumber}</span>
+                            <span className="victory-screen__stat-label">TURNOS</span>
+                        </div>
+                        <div className="victory-screen__stat">
+                            <span className="victory-screen__stat-value" style={{ color: 'var(--red)' }}>
+                                {20 - (amP1 ? game.p2Hp : game.p1Hp)}
+                            </span>
+                            <span className="victory-screen__stat-label">DANO CAUSADO</span>
+                        </div>
+                    </div>
+
+                    <a href="/game" className="cyber-btn">
                         🔄 VOLTAR AO MENU
                     </a>
                 </div>

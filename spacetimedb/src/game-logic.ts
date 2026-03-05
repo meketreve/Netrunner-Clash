@@ -11,7 +11,7 @@ import { drawCards } from './matchmaking.js';
 // ============================================================
 // Helpers
 // ============================================================
-function getGame(ctx: any, gameId: number) {
+function getGame(ctx: any, gameId: bigint) {
     for (const g of ctx.db.game.iter()) {
         if (g.id === gameId) return g;
     }
@@ -43,7 +43,7 @@ function spendEnergy(game: any, identity: any, cost: number): any {
     }
 }
 
-function getFieldCards(ctx: any, gameId: number, ownerHex: string) {
+function getFieldCards(ctx: any, gameId: bigint, ownerHex: string) {
     const cards = [];
     for (const card of ctx.db.cardInstance.iter()) {
         if (
@@ -112,13 +112,13 @@ function updatePlayerStats(ctx: any, winner: any, loser: any) {
 
 function logEvent(
     ctx: any,
-    gameId: number,
+    gameId: bigint,
     turn: number,
     eventType: string,
     message: string
 ) {
     ctx.db.gameLog.insert({
-        id: 0,
+        id: 0n,
         gameId,
         turn,
         eventType,
@@ -208,8 +208,8 @@ export const attack = spacetimedb.reducer(
         // Check Bypass keyword — can attack player directly
         const hasBypass = atkDef.keywords.includes('bypass');
 
-        // Target = 0 means attack player directly
-        if (targetId === BigInt(0) || targetId === 0) {
+        // Target = 0n means attack player directly
+        if (targetId === 0n) {
             // Can only attack directly if field empty or has bypass
             if (opponentFieldCards.length > 0 && !hasBypass) {
                 throw new Error('Must attack field cards first (or need Bypass)');

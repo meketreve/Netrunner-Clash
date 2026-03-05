@@ -16,6 +16,7 @@ interface CardProps {
     isSelected?: boolean;
     isTarget?: boolean;
     isDisabled?: boolean;
+    animationClass?: string;
     location?: 'hand' | 'field' | 'graveyard';
     onClick?: () => void;
     className?: string;
@@ -40,6 +41,7 @@ export default function Card({
     isSelected = false,
     isTarget = false,
     isDisabled = false,
+    animationClass = '',
     location = 'hand',
     onClick,
     className = '',
@@ -60,6 +62,7 @@ export default function Card({
         isSelected ? 'card--selected' : '',
         isTarget ? 'card--target' : '',
         isDisabled ? 'card--disabled' : '',
+        animationClass,
         className,
     ].filter(Boolean).join(' ');
 

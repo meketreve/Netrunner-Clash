@@ -11,16 +11,49 @@ import { DEFAULT_DECK, getCardDef } from './cards.js';
 // ============================================================
 export const registerPlayer = spacetimedb.reducer((ctx) => {
     const existing = ctx.db.player.identity.find(ctx.sender);
-    if (existing) return; // Already registered
+    if (existing) {
+        // Returning player — make sure they're marked online
+        if (!existing.isOnline) {
+            ctx.db.player.identity.update({ ...existing, isOnline: true });
+        }
+        return;
+    }
 
     ctx.db.player.insert({
         identity: ctx.sender,
         name: `Netrunner_${ctx.sender.toHexString().slice(0, 6)}`,
+        googleId: '',
+        email: '',
+        picture: '',
         isOnline: true,
         isInQueue: false,
         wins: 0,
         losses: 0,
+        tutorialCompleted: false,
     });
+});
+
+export const updateProfile = spacetimedb.reducer(
+    { name: t.string(), googleId: t.string(), email: t.string(), picture: t.string() },
+    (ctx, { name, googleId, email, picture }) => {
+        const player = ctx.db.player.identity.find(ctx.sender);
+        if (!player) throw new Error('Player not registered');
+
+        ctx.db.player.identity.update({
+            ...player,
+            name,
+            googleId,
+            email,
+            picture
+        });
+    }
+);
+
+export const completeTutorial = spacetimedb.reducer((ctx) => {
+    const player = ctx.db.player.identity.find(ctx.sender);
+    if (player) {
+        ctx.db.player.identity.update({ ...player, tutorialCompleted: true });
+    }
 });
 
 export const setPlayerName = spacetimedb.reducer(
@@ -63,7 +96,7 @@ export const joinQueue = spacetimedb.reducer((ctx) => {
 
         // Create game
         const game = ctx.db.game.insert({
-            id: 0, // auto_inc
+            id: 0n, // auto_inc
             player1: ctx.sender,
             player2: opponent.identity,
             currentTurn: ctx.sender, // Player 1 goes first
@@ -89,7 +122,7 @@ export const joinQueue = spacetimedb.reducer((ctx) => {
 
         // Log game start
         ctx.db.gameLog.insert({
-            id: 0,
+            id: 0n,
             gameId: game.id,
             turn: 1,
             eventType: 'game_start',
@@ -109,13 +142,13 @@ export const leaveQueue = spacetimedb.reducer((ctx) => {
 // ============================================================
 function createDeckForPlayer(
     ctx: any,
-    gameId: number,
+    gameId: bigint,
     owner: any
 ) {
     // Shuffle the default deck
     const shuffled = [...DEFAULT_DECK];
     for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = ctx.random.integerInRange(0, i);
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
 
@@ -123,7 +156,7 @@ function createDeckForPlayer(
     for (let i = 0; i < shuffled.length; i++) {
         const def = getCardDef(shuffled[i]);
         ctx.db.cardInstance.insert({
-            id: 0, // auto_inc
+            id: 0n, // auto_inc
             gameId,
             owner,
             cardDefId: def.id,
@@ -146,7 +179,7 @@ function createDeckForPlayer(
 // ============================================================
 export function drawCards(
     ctx: any,
-    gameId: number,
+    gameId: bigint,
     owner: any,
     count: number
 ) {

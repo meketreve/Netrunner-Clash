@@ -15,22 +15,34 @@ export default function SpacetimeProvider({ children }: { children: React.ReactN
             .withUri(process.env.NEXT_PUBLIC_SPACETIMEDB_URI || 'wss://maincloud.spacetimedb.com')
             .withDatabaseName(process.env.NEXT_PUBLIC_SPACETIMEDB_MODULE || 'royal-oil-0688')
             .onConnect((conn, identity, token) => {
-                console.log('[SpacetimeDB] Connected as:', identity.toHexString());
+                console.log('[SpacetimeDB] ✅ Connected as:', identity.toHexString());
                 storeToken(token);
                 // Register the player automatically
                 conn.reducers.registerPlayer({});
+                // Subscribe to all tables — REQUIRED for useTable to receive data
+                conn.subscriptionBuilder()
+                    .onApplied(() => {
+                        console.log('[SpacetimeDB] 📡 Subscription applied — tables are now synced');
+                    })
+                    .onError((_ctx: unknown, err: unknown) => {
+                        console.error('[SpacetimeDB] ❌ Subscription error:', err);
+                    })
+                    .subscribeToAllTables();
             })
             .onDisconnect((_ctx, error) => {
-                console.log('[SpacetimeDB] Disconnected', error || '');
+                console.log('[SpacetimeDB] 🔌 Disconnected', error || '');
             })
             .onConnectError((_ctx, err) => {
-                console.error('[SpacetimeDB] Connection error:', err);
+                console.error('[SpacetimeDB] ❌ Connection error:', err);
             });
 
         // Restore token if previously stored
         const token = getStoredToken();
         if (token) {
+            console.log('[SpacetimeDB] 🔑 Restoring saved token');
             builder.withToken(token);
+        } else {
+            console.log('[SpacetimeDB] 🆕 No saved token — new identity will be created');
         }
 
         return builder;

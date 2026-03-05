@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   keywords: ["card game", "cyberpunk", "pvp", "multiplayer", "netrunner"],
 };
 
+import Providers from "@/components/Providers";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -16,9 +18,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        <SpacetimeProvider>
+        <Providers>
           {children}
-        </SpacetimeProvider>
+        </Providers>
       </body>
     </html>
   );

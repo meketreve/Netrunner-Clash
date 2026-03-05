@@ -5,17 +5,21 @@
 
 import { schema, table, t } from 'spacetimedb/server';
 
-const spacetimedb = schema({
+const spacetimedb: any = schema({
     // Player profile
     player: table(
         { public: true },
         {
-            identity: t.identity({ primaryKey: true }),
+            identity: t.identity().primaryKey(),
             name: t.string(),
+            googleId: t.string().unique(), // unique Google ID
+            email: t.string(),
+            picture: t.string(),
             isOnline: t.bool(),
             isInQueue: t.bool(),
             wins: t.u32(),
             losses: t.u32(),
+            tutorialCompleted: t.bool(),
         }
     ),
 
@@ -23,7 +27,7 @@ const spacetimedb = schema({
     game: table(
         { public: true },
         {
-            id: t.u64({ autoInc: true, primaryKey: true }),
+            id: t.u64().autoInc().primaryKey(),
             player1: t.identity(),
             player2: t.identity(),
             currentTurn: t.identity(),
@@ -44,7 +48,7 @@ const spacetimedb = schema({
     cardInstance: table(
         { public: true },
         {
-            id: t.u64({ autoInc: true, primaryKey: true }),
+            id: t.u64().autoInc().primaryKey(),
             gameId: t.u64(),
             owner: t.identity(),
             cardDefId: t.u32(),
@@ -65,7 +69,7 @@ const spacetimedb = schema({
     gameLog: table(
         { public: true },
         {
-            id: t.u64({ autoInc: true, primaryKey: true }),
+            id: t.u64().autoInc().primaryKey(),
             gameId: t.u64(),
             turn: t.u32(),
             eventType: t.string(),

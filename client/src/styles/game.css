@@ -178,6 +178,122 @@
 }
 
 /* ============================================ */
+/* LEADERBOARD & SOCIAL                         */
+/* ============================================ */
+
+.lobby__social {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 20px;
+}
+
+.leaderboard {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.leaderboard__title {
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    color: var(--cyan);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+}
+
+.leaderboard__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.leaderboard__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+}
+
+.leaderboard__rank {
+    font-family: var(--font-display);
+    width: 20px;
+    color: var(--text-muted);
+}
+
+.leaderboard__rank--1 {
+    color: #ffd700;
+    text-shadow: 0 0 10px #ffd700;
+}
+
+.leaderboard__rank--2 {
+    color: #c0c0c0;
+}
+
+.leaderboard__rank--3 {
+    color: #cd7f32;
+}
+
+.leaderboard__avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--bg-deep);
+    border: 1px solid var(--border-subtle);
+    object-fit: cover;
+}
+
+.leaderboard__name {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leaderboard__wins {
+    font-family: var(--font-display);
+    color: var(--green);
+}
+
+.google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: white;
+    color: #1f1f1f;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.google-btn:hover {
+    background: #f1f1f1;
+}
+
+.google-btn__icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* ============================================ */
 /* GAME BOARD                                   */
 /* ============================================ */
 
@@ -493,4 +609,113 @@
 .victory-screen__subtitle {
     font-size: 1.2rem;
     color: var(--text-secondary);
+}
+
+.victory-screen__stats {
+    display: flex;
+    gap: 24px;
+    margin: 20px 0;
+}
+
+.victory-screen__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.victory-screen__stat-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 900;
+}
+
+.victory-screen__stat-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+
+/* HP Bar Animations */
+@keyframes hp-shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10% {
+        transform: translateX(-4px);
+    }
+
+    20% {
+        transform: translateX(4px);
+    }
+
+    30% {
+        transform: translateX(-3px);
+    }
+
+    40% {
+        transform: translateX(3px);
+    }
+
+    50% {
+        transform: translateX(-2px);
+    }
+
+    60% {
+        transform: translateX(2px);
+    }
+
+    70% {
+        transform: translateX(-1px);
+    }
+
+    80% {
+        transform: translateX(1px);
+    }
+}
+
+.player-info--damage-shake .player-info__hp-bar {
+    animation: hp-shake 0.5s ease;
+    border: 1px solid var(--red);
+    box-shadow: 0 0 12px rgba(255, 34, 68, 0.5);
+}
+
+.player-info--heal-glow .player-info__hp-bar {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.6), 0 0 30px rgba(0, 255, 136, 0.3);
+    transition: box-shadow 0.3s ease;
+}
+
+/* Player damage number popup */
+.player-damage-popup {
+    position: absolute;
+    top: -10px;
+    right: 60px;
+    font-family: var(--font-display);
+    font-weight: 900;
+    font-size: 1.6rem;
+    pointer-events: none;
+    z-index: 30;
+    animation: damage-float 0.8s ease forwards;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+@keyframes damage-float {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        opacity: 1;
+        transform: translateY(-25px) scale(1.3);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.8);
+    }
 }
