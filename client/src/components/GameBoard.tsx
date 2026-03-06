@@ -64,11 +64,10 @@ function Lobby() {
         setShowTutorial(false);
     };
 
-    // Check if we have an active game
-    const activeGame = allGames.find((g: Game) =>
-        g.status === 'active' &&
-        (g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity)
-    );
+    // Check if we have an active or recently finished game (prioritize active)
+    const myGame = (g: Game) => g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity;
+    const activeGame = allGames.find((g: Game) => g.status === 'active' && myGame(g))
+        || allGames.find((g: Game) => g.status === 'finished' && myGame(g));
 
     if (activeGame) {
         return <GameBoard game={activeGame} myIdentity={myIdentity} />;
