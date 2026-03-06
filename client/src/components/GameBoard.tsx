@@ -39,7 +39,7 @@ function Lobby() {
     );
 
     const [showTutorial, setShowTutorial] = useState(false);
-    const [dismissedGameId, setDismissedGameId] = useState<bigint | null>(null);
+    const [showFinishedGame, setShowFinishedGame] = useState(true);
 
     // Sync Google Session with SpacetimeDB
     useEffect(() => {
@@ -67,11 +67,19 @@ function Lobby() {
 
     // Check if we have an active or recently finished game (prioritize active)
     const myGame = (g: Game) => g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity;
-    const activeGame = allGames.find((g: Game) => g.status === 'active' && myGame(g))
-        || allGames.find((g: Game) => g.status === 'finished' && myGame(g) && g.id !== dismissedGameId);
+    const liveGame = allGames.find((g: Game) => g.status === 'active' && myGame(g));
+    const finishedGame = showFinishedGame
+        ? allGames.find((g: Game) => g.status === 'finished' && myGame(g))
+        : null;
+    const activeGame = liveGame || finishedGame;
+
+    // Re-enable finished game display when a new active game starts
+    useEffect(() => {
+        if (liveGame) setShowFinishedGame(true);
+    }, [liveGame]);
 
     if (activeGame) {
-        return <GameBoard game={activeGame} myIdentity={myIdentity} onDismiss={() => setDismissedGameId(activeGame.id)} />;
+        return <GameBoard game={activeGame} myIdentity={myIdentity} onDismiss={() => setShowFinishedGame(false)} />;
     }
 
     const handleJoinQueue = () => conn?.reducers.joinQueue({});
