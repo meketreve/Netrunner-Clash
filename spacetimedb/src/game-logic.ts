@@ -8,6 +8,7 @@ import { t } from 'spacetimedb/server';
 import { getCardDef } from './cards.js';
 import { drawCards } from './matchmaking.js';
 import { updatePlayerStats, logEvent, getOpponent, getGame } from './game-utils.js';
+import { getFieldCards as getOptimizedFieldCards, measureQuery, invalidateGameCache } from './query-optimizer.js';
 
 // ============================================================
 // Helpers
@@ -39,17 +40,9 @@ function spendEnergy(game: any, identity: any, cost: number): any {
 }
 
 function getFieldCards(ctx: any, gameId: bigint, ownerHex: string) {
-    const cards = [];
-    for (const card of ctx.db.cardInstance.iter()) {
-        if (
-            card.gameId === gameId &&
-            card.owner.toHexString() === ownerHex &&
-            card.location === 'field'
-        ) {
-            cards.push(card);
-        }
-    }
-    return cards;
+    return measureQuery('getFieldCards', () => {
+        return getOptimizedFieldCards(ctx, gameId, ownerHex);
+    });
 }
 
 
@@ -132,6 +125,9 @@ export const playCard = spacetimedb.reducer(
             fieldSlot: slot,
             canAttack: false, // Summoning sickness
         });
+
+        // Invalidate cache for this game
+        invalidateGameCache(gameId);
 
         logEvent(ctx, gameId, game.turnNumber, 'summon', `${def.name} invocado no slot ${slot}`);
 

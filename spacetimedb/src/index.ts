@@ -14,3 +14,14 @@ export { registerPlayer, setPlayerName, updateProfile, completeTutorial, joinQue
 
 // Game logic reducers
 export { playCard, attack, useHack, applyBuff, endPhase, endTurn, forfeit } from './game-logic.js';
+
+// Performance optimization systems
+export { 
+    initializePerformance, 
+    updateGameMetrics, 
+    onGameStart, 
+    onGameEnd, 
+    onPlayerDisconnect,
+    runPerformanceHealthCheck,
+    shutdownPerformanceSystems 
+} from './performance-init.js';
