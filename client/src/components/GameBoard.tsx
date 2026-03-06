@@ -39,6 +39,7 @@ function Lobby() {
     );
 
     const [showTutorial, setShowTutorial] = useState(false);
+    const [dismissedGameId, setDismissedGameId] = useState<bigint | null>(null);
 
     // Sync Google Session with SpacetimeDB
     useEffect(() => {
@@ -67,10 +68,10 @@ function Lobby() {
     // Check if we have an active or recently finished game (prioritize active)
     const myGame = (g: Game) => g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity;
     const activeGame = allGames.find((g: Game) => g.status === 'active' && myGame(g))
-        || allGames.find((g: Game) => g.status === 'finished' && myGame(g));
+        || allGames.find((g: Game) => g.status === 'finished' && myGame(g) && g.id !== dismissedGameId);
 
     if (activeGame) {
-        return <GameBoard game={activeGame} myIdentity={myIdentity} />;
+        return <GameBoard game={activeGame} myIdentity={myIdentity} onDismiss={() => setDismissedGameId(activeGame.id)} />;
     }
 
     const handleJoinQueue = () => conn?.reducers.joinQueue({});
@@ -170,7 +171,7 @@ function Lobby() {
 // GAME BOARD COMPONENT — Real SpacetimeDB Data
 // ============================================================
 
-function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
+function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: string; onDismiss?: () => void }) {
     const spacetime = useSpacetimeDB();
     const conn = spacetime.getConnection() as DbConnection | null;
     const { showGameError } = useToast();
@@ -514,9 +515,9 @@ function GameBoard({ game, myIdentity }: { game: Game; myIdentity: string }) {
                         </div>
                     </div>
 
-                    <a href="/game" className="cyber-btn">
+                    <button className="cyber-btn" onClick={onDismiss}>
                         🔄 VOLTAR AO MENU
-                    </a>
+                    </button>
                 </div>
             )}
 
