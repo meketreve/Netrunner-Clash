@@ -69,7 +69,9 @@ function Lobby() {
     const myGame = (g: Game) => g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity;
     const liveGame = allGames.find((g: Game) => g.status === 'active' && myGame(g));
     const finishedGame = showFinishedGame
-        ? allGames.find((g: Game) => g.status === 'finished' && myGame(g))
+        ? [...allGames]
+            .filter((g: Game) => g.status === 'finished' && myGame(g))
+            .sort((a, b) => Number(b.id) - Number(a.id))[0] || null
         : null;
     const activeGame = liveGame || finishedGame;
 
@@ -531,7 +533,7 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
 
             {/* Forfeit Button */}
             {game.status === 'active' && (
-                <button className="cyber-btn cyber-btn--small cyber-btn--danger" onClick={handleForfeit} style={{ position: 'fixed', top: '10px', right: '10px', fontSize: '0.7rem', opacity: 0.6 }}>
+                <button className="cyber-btn cyber-btn--small cyber-btn--danger" onClick={handleForfeit} style={{ position: 'fixed', bottom: '10px', left: '10px', fontSize: '0.7rem', opacity: 0.6, zIndex: 20 }}>
                     🏳️ DESISTIR
                 </button>
             )}
