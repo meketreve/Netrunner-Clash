@@ -41,7 +41,7 @@ export default function RankingPage() {
       if (searchTerm) {
         // Usar busca com termo
         const searchResults = await conn.reducers.searchPlayers({ searchTerm, limit: playersPerPage, page: currentPage });
-        players = searchResults.map(player => ({
+        players = searchResults.map((player: any) => ({
           playerId: player.identity.toHexString(),
           playerName: player.name,
           wins: player.wins,
@@ -52,7 +52,7 @@ export default function RankingPage() {
       } else {
         // Buscar top players
         const topPlayers = await conn.reducers.getTopPlayers({ limit: playersPerPage, page: currentPage });
-        players = topPlayers.map(player => ({
+        players = topPlayers.map((player: any) => ({
           playerId: player.identity.toHexString(),
           playerName: player.name,
           wins: player.wins,
