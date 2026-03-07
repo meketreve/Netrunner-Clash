@@ -35,45 +35,55 @@ export default function RankingPage() {
     
     setLoading(true);
     try {
-      // Simular dados de ranking - em produção, viria do SpacetimeDB
+      // Buscar dados reais do SpacetimeDB
+      let players: PlayerRanking[] = [];
+      
+      if (searchTerm) {
+        // Usar busca com termo
+        const searchResults = await conn.reducers.searchPlayers({ searchTerm, limit: playersPerPage, page: currentPage });
+        players = searchResults.map(player => ({
+          playerId: player.identity.toHexString(),
+          playerName: player.name,
+          wins: player.wins,
+          losses: player.losses,
+          winRate: player.winRate,
+          rank: player.rank
+        }));
+      } else {
+        // Buscar top players
+        const topPlayers = await conn.reducers.getTopPlayers({ limit: playersPerPage, page: currentPage });
+        players = topPlayers.map(player => ({
+          playerId: player.identity.toHexString(),
+          playerName: player.name,
+          wins: player.wins,
+          losses: player.losses,
+          winRate: player.winRate,
+          rank: player.rank
+        }));
+      }
+
+      setPlayers(players);
+      
+      // Calcular totais para paginação
+      const total = players.length;
+      const pages = Math.ceil(total / playersPerPage);
+      setTotalPages(pages);
+      setTotalPlayers(total);
+      
+    } catch (error) {
+      console.error('Erro ao carregar ranking:', error);
+      // Fallback para dados mock em caso de erro
       const mockPlayers: PlayerRanking[] = [
         { playerId: '1', playerName: 'CyberNinja', wins: 42, losses: 8, winRate: 84, rank: 1 },
         { playerId: '2', playerName: 'NeonSamurai', wins: 38, losses: 12, winRate: 76, rank: 2 },
         { playerId: '3', playerName: 'PixelHunter', wins: 35, losses: 15, winRate: 70, rank: 3 },
         { playerId: '4', playerName: 'DataRogue', wins: 32, losses: 18, winRate: 64, rank: 4 },
         { playerId: '5', playerName: 'CodeBreaker', wins: 28, losses: 22, winRate: 56, rank: 5 },
-        { playerId: '6', playerName: 'GlitchMaster', wins: 25, losses: 25, winRate: 50, rank: 6 },
-        { playerId: '7', playerName: 'QuantumPlayer', wins: 22, losses: 28, winRate: 44, rank: 7 },
-        { playerId: '8', playerName: 'ByteWarrior', wins: 20, losses: 30, winRate: 40, rank: 8 },
-        { playerId: '9', playerName: 'NetRunner', wins: 18, losses: 32, winRate: 36, rank: 9 },
-        { playerId: '10', playerName: 'CyberPunk', wins: 15, losses: 35, winRate: 30, rank: 10 },
-        { playerId: '11', playerName: 'TechMage', wins: 12, losses: 38, winRate: 24, rank: 11 },
-        { playerId: '12', playerName: 'DigitalGhost', wins: 10, losses: 40, winRate: 20, rank: 12 },
-        { playerId: '13', playerName: 'MatrixWalker', wins: 8, losses: 42, winRate: 16, rank: 13 },
-        { playerId: '14', playerName: 'ByteNinja', wins: 5, losses: 45, winRate: 10, rank: 14 },
-        { playerId: '15', playerName: 'RookieRunner', wins: 2, losses: 48, winRate: 4, rank: 15 },
       ];
-
-      // Filtrar por termo de busca
-      let filteredPlayers = mockPlayers;
-      if (searchTerm) {
-        filteredPlayers = mockPlayers.filter(player =>
-          player.playerName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-
-      // Calcular paginação
-      const total = filteredPlayers.length;
-      const pages = Math.ceil(total / playersPerPage);
-      const startIndex = (currentPage - 1) * playersPerPage;
-      const endIndex = startIndex + playersPerPage;
-      const paginatedPlayers = filteredPlayers.slice(startIndex, endIndex);
-
-      setPlayers(paginatedPlayers);
-      setTotalPages(pages);
-      setTotalPlayers(total);
-    } catch (error) {
-      console.error('Erro ao carregar ranking:', error);
+      
+      setPlayers(mockPlayers);
+      setTotalPages(1);
+      setTotalPlayers(mockPlayers.length);
     } finally {
       setLoading(false);
     }

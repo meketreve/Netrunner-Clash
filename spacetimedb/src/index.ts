@@ -15,6 +15,9 @@ export { registerPlayer, setPlayerName, updateProfile, completeTutorial, joinQue
 // Game logic reducers
 export { playCard, attack, useHack, applyBuff, endPhase, endTurn, forfeit } from './game-logic.js';
 
+// Ranking reducers
+export { getTopPlayers, searchPlayers, getPlayerRank, getRankingStats } from './ranking.js';
+
 // Performance optimization systems
 export { 
     initializePerformance, 
