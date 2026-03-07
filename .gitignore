@@ -3,6 +3,8 @@ _bmad/
 _bmad-output/
 .agents/
 _agents/
+.windsurf/
+.agent/
 
 # Node modules
 node_modules/
@@ -10,6 +12,7 @@ node_modules/
 # Next.js
 client/.next/
 client/out/
+.vercel/
 
 # SpacetimeDB
 spacetimedb/dist/
@@ -20,6 +23,15 @@ spacetime.local.json
 .env
 .env.local
 .env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
 # OS
 .DS_Store
