@@ -79,6 +79,12 @@
 
 .card--large .card__name {
     font-size: 0.8rem;
+    text-align: center;
+}
+
+.card--large .card__header {
+    padding-left: 6px;
+    text-align: center;
 }
 
 .card--large .card__art {
@@ -87,7 +93,7 @@
 }
 
 .card--large .card__description {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
 }
 
 .card--large .card__stat {
