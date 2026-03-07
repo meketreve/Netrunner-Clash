@@ -103,16 +103,6 @@ export default function HomePage() {
           </button>
         </Link>
 
-        <Link href="/ranking" style={{ textDecoration: 'none' }}>
-          <button
-            className="cyber-btn"
-            style={{ width: '100%', padding: '16px 32px', fontSize: '1rem', borderColor: 'var(--yellow)', color: 'var(--yellow)' }}
-            onMouseEnter={() => setHoveredBtn('ranking')}
-            onMouseLeave={() => setHoveredBtn(null)}
-          >
-            🏆 RANKING
-          </button>
-        </Link>
       </div>
 
       {/* Footer */}

@@ -12,12 +12,12 @@ const STEPS: TutorialStep[] = [
     {
         target: 'lobby',
         title: 'BEM-VINDO, NETRUNNER',
-        description: 'Você está no centro de comando. Aqui você pode ver seu status e o ranking dos melhores hackers.'
+        description: 'Você está no centro de comando. Aqui você pode ver seu status e gerenciar sua conta.'
     },
     {
         target: 'google-btn',
         title: 'IDENTIDADE CYBER',
-        description: 'Conecte sua conta do Google para salvar seu progresso e aparecer no Leaderboard.'
+        description: 'Conecte sua conta do Google para salvar seu progresso e sincronizar seus dados.'
     },
     {
         target: 'join-btn',
