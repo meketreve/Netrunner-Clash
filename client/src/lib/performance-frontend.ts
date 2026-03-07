@@ -3,7 +3,9 @@
 // Client-side performance monitoring and optimization
 // ============================================================
 
-import { useCallback, useMemo, useEffect, useRef } from 'react';
+'use client';
+
+import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 
 // ============================================================
 // Performance Monitoring
@@ -202,7 +204,7 @@ export function useTrackedCallback<T extends (...args: any[]) => any>(
     deps: React.DependencyList,
     callbackName: string
 ): T {
-    return useCallback((...args: Parameters<T>) => {
+    return useCallback((...args: any[]) => {
         const start = performance.now();
         const result = callback(...args);
         const end = performance.now();
@@ -212,7 +214,7 @@ export function useTrackedCallback<T extends (...args: any[]) => any>(
         }
         
         return result;
-    }, deps);
+    }, deps) as T;
 }
 
 // ============================================================
@@ -383,7 +385,7 @@ export function measurePerformance<T extends (...args: any[]) => any>(
         
         console.log(`⏱️ ${name} took ${(end - start).toFixed(2)}ms`);
         return result;
-    }) as T;
+    }) as unknown as T;
 }
 
 // ============================================================
