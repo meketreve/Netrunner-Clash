@@ -177,7 +177,7 @@ export const getPlayerRank = spacetimedb.reducer(
 export const getRankingStats = spacetimedb.reducer(
     {},
     (ctx) => {
-        const players = Array.from(ctx.db.player.iter());
+        const players: any[] = Array.from(ctx.db.player.iter());
         
         const totalPlayers = players.length;
         const activePlayers = players.filter(p => p.isOnline).length;

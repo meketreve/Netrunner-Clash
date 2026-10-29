@@ -18,13 +18,6 @@ export { playCard, attack, useHack, applyBuff, endPhase, endTurn, forfeit } from
 // Ranking reducers
 export { getTopPlayers, searchPlayers, getPlayerRank, getRankingStats } from './ranking.js';
 
-// Performance optimization systems
-export { 
-    initializePerformance, 
-    updateGameMetrics, 
-    onGameStart, 
-    onGameEnd, 
-    onPlayerDisconnect,
-    runPerformanceHealthCheck,
-    shutdownPerformanceSystems 
-} from './performance-init.js';
+// The performance-* / connection-pool / message-batcher / asset-manager files are NOT
+// exported: they start setInterval at import, which the SpacetimeDB runtime lacks,
+// and none of them define reducers.
