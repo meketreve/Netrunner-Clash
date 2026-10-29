@@ -8,7 +8,6 @@ import { t } from 'spacetimedb/server';
 import { getCardDef } from './cards.js';
 import { drawCards } from './matchmaking.js';
 import { updatePlayerStats, logEvent, getOpponent, getGame } from './game-utils.js';
-import { getFieldCards as getOptimizedFieldCards, measureQuery, invalidateGameCache } from './query-optimizer.js';
 
 // ============================================================
 // Helpers
@@ -39,10 +38,22 @@ function spendEnergy(game: any, identity: any, cost: number): any {
     }
 }
 
+// Always read fresh rows: a cache kept across reducer calls returns cards that
+// already died or moved, and spreading those rows back writes stale state.
 function getFieldCards(ctx: any, gameId: bigint, ownerHex: string) {
-    return measureQuery('getFieldCards', () => {
-        return getOptimizedFieldCards(ctx, gameId, ownerHex);
-    });
+    const cards = [];
+    for (const card of ctx.db.cardInstance.iter()) {
+        if (card.gameId === gameId && card.owner.toHexString() === ownerHex && card.location === 'field') {
+            cards.push(card);
+        }
+    }
+    return cards;
+}
+
+// Card lookup scoped to the game, so ids from other (finished) games can't be used
+function findGameCard(ctx: any, gameId: bigint, cardId: bigint) {
+    const card = ctx.db.cardInstance.id.find(cardId);
+    return card && card.gameId === gameId ? card : null;
 }
 
 
@@ -100,7 +111,7 @@ export const playCard = spacetimedb.reducer(
         if (slot > 3) throw new Error('Invalid slot (0-3)');
 
         // Find the card
-        const card = ctx.db.cardInstance.id.find(cardInstanceId);
+        const card = findGameCard(ctx, gameId, cardInstanceId);
         if (!card) throw new Error('Card not found');
         if (card.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
         if (card.location !== 'hand') throw new Error('Card not in hand');
@@ -125,9 +136,6 @@ export const playCard = spacetimedb.reducer(
             fieldSlot: slot,
             canAttack: false, // Summoning sickness
         });
-
-        // Invalidate cache for this game
-        invalidateGameCache(gameId);
 
         logEvent(ctx, gameId, game.turnNumber, 'summon', `${def.name} invocado no slot ${slot}`);
 
@@ -155,7 +163,7 @@ export const attack = spacetimedb.reducer(
         isMyTurn(ctx, game);
         if (game.phase !== 'combat') throw new Error('Can only attack in combat phase');
 
-        const attacker = ctx.db.cardInstance.id.find(attackerId);
+        const attacker = findGameCard(ctx, gameId, attackerId);
         if (!attacker) throw new Error('Attacker not found');
         if (attacker.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
         if (attacker.location !== 'field') throw new Error('Attacker not on field');
@@ -191,7 +199,7 @@ export const attack = spacetimedb.reducer(
             }
         } else {
             // Attack a card
-            const target = ctx.db.cardInstance.id.find(targetId);
+            const target = findGameCard(ctx, gameId, targetId);
             if (!target) throw new Error('Target not found');
             if (target.location !== 'field') throw new Error('Target not on field');
             if (target.owner.toHexString() === ctx.sender.toHexString()) throw new Error('Cannot attack own card');
@@ -291,7 +299,7 @@ export const useHack = spacetimedb.reducer(
         isMyTurn(ctx, game);
         if (game.phase !== 'main') throw new Error('Can only use hacks in main phase');
 
-        const card = ctx.db.cardInstance.id.find(cardInstanceId);
+        const card = findGameCard(ctx, gameId, cardInstanceId);
         if (!card) throw new Error('Card not found');
         if (card.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
         if (card.location !== 'hand') throw new Error('Card not in hand');
@@ -326,7 +334,7 @@ export const useHack = spacetimedb.reducer(
                 break;
             }
             case 'destroy_low_hp': {
-                const target = ctx.db.cardInstance.id.find(targetId);
+                const target = findGameCard(ctx, gameId, targetId);
                 if (target && target.location === 'field' && target.currentHp <= (def.effect.value || 3)) {
                     ctx.db.cardInstance.id.update({ ...target, location: 'graveyard', currentHp: 0, fieldSlot: 0 });
                     const tDef = getCardDef(target.cardDefId);
@@ -369,7 +377,7 @@ export const useHack = spacetimedb.reducer(
                 break;
             }
             case 'debuff_atk': {
-                const target = ctx.db.cardInstance.id.find(targetId);
+                const target = findGameCard(ctx, gameId, targetId);
                 if (target && target.location === 'field') {
                     ctx.db.cardInstance.id.update({
                         ...target,
@@ -381,7 +389,7 @@ export const useHack = spacetimedb.reducer(
                 break;
             }
             case 'damage_single': {
-                const target = ctx.db.cardInstance.id.find(targetId);
+                const target = findGameCard(ctx, gameId, targetId);
                 if (target && target.location === 'field') {
                     const newHp = target.currentHp - (def.effect.value || 0);
                     if (newHp <= 0) {
@@ -412,7 +420,7 @@ export const applyBuff = spacetimedb.reducer(
         isMyTurn(ctx, game);
         if (game.phase !== 'main') throw new Error('Can only apply buffs in main phase');
 
-        const buffCard = ctx.db.cardInstance.id.find(buffCardId);
+        const buffCard = findGameCard(ctx, gameId, buffCardId);
         if (!buffCard) throw new Error('Buff card not found');
         if (buffCard.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
         if (buffCard.location !== 'hand') throw new Error('Card not in hand');
@@ -420,7 +428,7 @@ export const applyBuff = spacetimedb.reducer(
         const def = getCardDef(buffCard.cardDefId);
         if (def.type !== 'buff') throw new Error('Card is not a buff');
 
-        const target = ctx.db.cardInstance.id.find(targetId);
+        const target = findGameCard(ctx, gameId, targetId);
         if (!target) throw new Error('Target not found');
         if (target.location !== 'field') throw new Error('Target not on field');
         if (target.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Can only buff own cards');
@@ -585,36 +593,28 @@ export const endTurn = spacetimedb.reducer(
             }
         }
 
-        // Enable attack for opponent's field cards, trigger on_turn_start effects
-        for (const card of ctx.db.cardInstance.iter()) {
-            if (
-                card.gameId === gameId &&
-                card.owner.toHexString() === opponentHex &&
-                card.location === 'field'
-            ) {
-                ctx.db.cardInstance.id.update({ ...card, canAttack: true });
+        // Enable attack for opponent's field cards
+        const opponentField = getFieldCards(ctx, gameId, opponentHex);
+        for (const card of opponentField) {
+            ctx.db.cardInstance.id.update({ ...card, canAttack: true });
+        }
 
-                // Handle on_turn_start effects (Neon Medic)
-                const cDef = getCardDef(card.cardDefId);
-                if (cDef.effect && cDef.effect.trigger === 'on_turn_start') {
-                    if (cDef.effect.action === 'heal_ally') {
-                        // Heal a random ally
-                        const allies = getFieldCards(ctx, gameId, opponentHex);
-                        const damaged = allies.filter((a: any) => {
-                            const aDef = getCardDef(a.cardDefId);
-                            return a.currentHp < aDef.hp + (a.currentHp - aDef.hp); // has taken damage
-                        });
-                        if (damaged.length > 0) {
-                            const healTarget = damaged[0];
-                            ctx.db.cardInstance.id.update({
-                                ...healTarget,
-                                currentHp: healTarget.currentHp + (cDef.effect.value || 1),
-                            });
-                            const htDef = getCardDef(healTarget.cardDefId);
-                            logEvent(ctx, gameId, newTurnNumber, 'heal',
-                                `${cDef.name} curou ${htDef.name} em ${cDef.effect.value} HP`);
-                        }
-                    }
+        // Trigger on_turn_start effects (Neon Medic) on fresh rows, after the update above
+        for (const card of opponentField) {
+            const cDef = getCardDef(card.cardDefId);
+            if (cDef.effect && cDef.effect.trigger === 'on_turn_start' && cDef.effect.action === 'heal_ally') {
+                // Heal the first ally below its base HP, capped at base HP
+                const damaged = getFieldCards(ctx, gameId, opponentHex)
+                    .filter((a: any) => a.currentHp < getCardDef(a.cardDefId).hp);
+                if (damaged.length > 0) {
+                    const healTarget = damaged[0];
+                    const htDef = getCardDef(healTarget.cardDefId);
+                    ctx.db.cardInstance.id.update({
+                        ...healTarget,
+                        currentHp: Math.min(htDef.hp, healTarget.currentHp + (cDef.effect.value || 1)),
+                    });
+                    logEvent(ctx, gameId, newTurnNumber, 'heal',
+                        `${cDef.name} curou ${htDef.name} em ${cDef.effect.value} HP`);
                 }
             }
         }

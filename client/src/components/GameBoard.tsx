@@ -228,12 +228,14 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
     // ACTIONS — Call real SpacetimeDB reducers with error handling
     // ============================================================
 
-    // Wrapper to catch SpacetimeDB reducer errors and show as toast
-    const safeCall = useCallback((fn: () => void) => {
+    // Wrapper to catch SpacetimeDB reducer errors and show as toast.
+    // Reducer calls return a Promise (SDK 2.x), so failures arrive as rejections.
+    const safeCall = useCallback((fn: () => Promise<void> | undefined) => {
+        const onError = (err: unknown) => showGameError(err instanceof Error ? err.message : String(err));
         try {
-            fn();
-        } catch (err: any) {
-            showGameError(err?.message || String(err));
+            fn()?.catch(onError);
+        } catch (err) {
+            onError(err);
         }
     }, [showGameError]);
 
