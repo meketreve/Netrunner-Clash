@@ -1,5 +1,10 @@
 import GameBoard from '@/components/GameBoard';
+import SpacetimeProvider from '@/components/SpacetimeProvider';
 
 export default function GamePage() {
-    return <GameBoard />;
+    return (
+        <SpacetimeProvider>
+            <GameBoard />
+        </SpacetimeProvider>
+    );
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import SpacetimeProvider from "@/components/SpacetimeProvider";
 
 export const metadata: Metadata = {
   title: "Netrunner Clash — Cyberpunk Card Game",

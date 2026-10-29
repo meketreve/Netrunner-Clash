@@ -4,7 +4,7 @@
 // ============================================================
 
 import spacetimedb from './schema.js';
-import { t } from 'spacetimedb/server';
+import { t, SenderError } from 'spacetimedb/server';
 import { getCardDef } from './cards.js';
 import { drawCards } from './matchmaking.js';
 import { updatePlayerStats, logEvent, getOpponent, getGame } from './game-utils.js';
@@ -15,10 +15,10 @@ import { updatePlayerStats, logEvent, getOpponent, getGame } from './game-utils.
 
 function isMyTurn(ctx: any, game: any) {
     if (game.currentTurn.toHexString() !== ctx.sender.toHexString()) {
-        throw new Error('Not your turn');
+        throw new SenderError('Not your turn');
     }
     if (game.status !== 'active') {
-        throw new Error('Game is not active');
+        throw new SenderError('Game is not active');
     }
 }
 
@@ -30,10 +30,10 @@ function getPlayerEnergy(game: any, identity: any): number {
 function spendEnergy(game: any, identity: any, cost: number): any {
     const hex = identity.toHexString();
     if (hex === game.player1.toHexString()) {
-        if (game.p1Energy < cost) throw new Error('Not enough energy');
+        if (game.p1Energy < cost) throw new SenderError('Not enough energy');
         return { ...game, p1Energy: game.p1Energy - cost };
     } else {
-        if (game.p2Energy < cost) throw new Error('Not enough energy');
+        if (game.p2Energy < cost) throw new SenderError('Not enough energy');
         return { ...game, p2Energy: game.p2Energy - cost };
     }
 }
@@ -42,8 +42,8 @@ function spendEnergy(game: any, identity: any, cost: number): any {
 // already died or moved, and spreading those rows back writes stale state.
 function getFieldCards(ctx: any, gameId: bigint, ownerHex: string) {
     const cards = [];
-    for (const card of ctx.db.cardInstance.iter()) {
-        if (card.gameId === gameId && card.owner.toHexString() === ownerHex && card.location === 'field') {
+    for (const card of ctx.db.cardInstance.gameId.filter(gameId)) {
+        if (card.owner.toHexString() === ownerHex && card.location === 'field') {
             cards.push(card);
         }
     }
@@ -77,12 +77,25 @@ function healPlayer(game: any, playerHex: string, amount: number): any {
     }
 }
 
+// Max HP of a card on the field; rows created before the maxHp column hold 0
+function getMaxHp(card: any): number {
+    return card.maxHp > 0 ? card.maxHp : getCardDef(card.cardDefId).hp;
+}
+
 function checkWinCondition(ctx: any, game: any): any {
     let updatedGame = { ...game };
     const p1Hex = game.player1.toHexString();
     const p2Hex = game.player2.toHexString();
 
-    if (updatedGame.p1Hp <= 0) {
+    // Both at 0 on the same action (e.g. overflow + drain): whoever acted wins
+    if (updatedGame.p1Hp <= 0 && updatedGame.p2Hp <= 0) {
+        const p1Acted = game.currentTurn.toHexString() === p1Hex;
+        updatedGame.status = 'finished';
+        updatedGame.winnerId = p1Acted ? p1Hex : p2Hex;
+        logEvent(ctx, game.id, game.turnNumber, 'game_end', `Jogador ${p1Acted ? 1 : 2} venceu!`);
+        if (p1Acted) updatePlayerStats(ctx, game.player1, game.player2);
+        else updatePlayerStats(ctx, game.player2, game.player1);
+    } else if (updatedGame.p1Hp <= 0) {
         updatedGame.status = 'finished';
         updatedGame.winnerId = p2Hex;
         logEvent(ctx, game.id, game.turnNumber, 'game_end', 'Jogador 2 venceu!');
@@ -107,22 +120,22 @@ export const playCard = spacetimedb.reducer(
     (ctx, { gameId, cardInstanceId, slot }) => {
         let game = getGame(ctx, gameId);
         isMyTurn(ctx, game);
-        if (game.phase !== 'main') throw new Error('Can only play cards in main phase');
-        if (slot > 3) throw new Error('Invalid slot (0-3)');
+        if (game.phase !== 'main') throw new SenderError('Can only play cards in main phase');
+        if (slot > 3) throw new SenderError('Invalid slot (0-3)');
 
         // Find the card
         const card = findGameCard(ctx, gameId, cardInstanceId);
-        if (!card) throw new Error('Card not found');
-        if (card.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
-        if (card.location !== 'hand') throw new Error('Card not in hand');
+        if (!card) throw new SenderError('Card not found');
+        if (card.owner.toHexString() !== ctx.sender.toHexString()) throw new SenderError('Not your card');
+        if (card.location !== 'hand') throw new SenderError('Card not in hand');
 
         const def = getCardDef(card.cardDefId);
-        if (def.type !== 'character') throw new Error('Only characters can be played to field');
+        if (def.type !== 'character') throw new SenderError('Only characters can be played to field');
 
         // Check slot is empty
         const fieldCards = getFieldCards(ctx, gameId, ctx.sender.toHexString());
         if (fieldCards.some((c: any) => c.fieldSlot === slot)) {
-            throw new Error('Slot already occupied');
+            throw new SenderError('Slot already occupied');
         }
 
         // Spend energy
@@ -161,19 +174,19 @@ export const attack = spacetimedb.reducer(
     (ctx, { gameId, attackerId, targetId }) => {
         let game = getGame(ctx, gameId);
         isMyTurn(ctx, game);
-        if (game.phase !== 'combat') throw new Error('Can only attack in combat phase');
+        if (game.phase !== 'combat') throw new SenderError('Can only attack in combat phase');
 
         const attacker = findGameCard(ctx, gameId, attackerId);
-        if (!attacker) throw new Error('Attacker not found');
-        if (attacker.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
-        if (attacker.location !== 'field') throw new Error('Attacker not on field');
-        if (!attacker.canAttack) throw new Error('Cannot attack this turn');
+        if (!attacker) throw new SenderError('Attacker not found');
+        if (attacker.owner.toHexString() !== ctx.sender.toHexString()) throw new SenderError('Not your card');
+        if (attacker.location !== 'field') throw new SenderError('Attacker not on field');
+        if (!attacker.canAttack) throw new SenderError('Cannot attack this turn');
 
         const atkDef = getCardDef(attacker.cardDefId);
         const effectiveAtk = attacker.currentAtk + attacker.tempAtkBuff +
             (atkDef.keywords.includes('overload') && getPlayerEnergy(game, ctx.sender) <= 3 ? 2 : 0);
 
-        if (effectiveAtk <= 0) throw new Error('Cannot attack with 0 ATK');
+        if (effectiveAtk <= 0) throw new SenderError('Cannot attack with 0 ATK');
 
         const opponentHex = getOpponent(game, ctx.sender.toHexString()).toHexString();
         const opponentFieldCards = getFieldCards(ctx, gameId, opponentHex);
@@ -185,7 +198,7 @@ export const attack = spacetimedb.reducer(
         if (targetId === 0n) {
             // Can only attack directly if field empty or has bypass
             if (opponentFieldCards.length > 0 && !hasBypass) {
-                throw new Error('Must attack field cards first (or need Bypass)');
+                throw new SenderError('Must attack field cards first (or need Bypass)');
             }
 
             game = damageOpponentHp(game, ctx.sender.toHexString(), effectiveAtk);
@@ -200,10 +213,10 @@ export const attack = spacetimedb.reducer(
         } else {
             // Attack a card
             const target = findGameCard(ctx, gameId, targetId);
-            if (!target) throw new Error('Target not found');
-            if (target.location !== 'field') throw new Error('Target not on field');
-            if (target.owner.toHexString() === ctx.sender.toHexString()) throw new Error('Cannot attack own card');
-            if (target.stealthTurns > 0) throw new Error('Target is in stealth');
+            if (!target) throw new SenderError('Target not found');
+            if (target.location !== 'field') throw new SenderError('Target not on field');
+            if (target.owner.toHexString() === ctx.sender.toHexString()) throw new SenderError('Cannot attack own card');
+            if (target.stealthTurns > 0) throw new SenderError('Target is in stealth');
 
             // Check Taunt: must attack taunt cards first
             const hasTauntCards = opponentFieldCards.some((c: any) => {
@@ -213,7 +226,7 @@ export const attack = spacetimedb.reducer(
             if (hasTauntCards) {
                 const targetDef = getCardDef(target.cardDefId);
                 if (!targetDef.keywords.includes('taunt')) {
-                    throw new Error('Must attack Taunt cards first');
+                    throw new SenderError('Must attack Taunt cards first');
                 }
             }
 
@@ -297,16 +310,16 @@ export const useHack = spacetimedb.reducer(
     (ctx, { gameId, cardInstanceId, targetId }) => {
         let game = getGame(ctx, gameId);
         isMyTurn(ctx, game);
-        if (game.phase !== 'main') throw new Error('Can only use hacks in main phase');
+        if (game.phase !== 'main') throw new SenderError('Can only use hacks in main phase');
 
         const card = findGameCard(ctx, gameId, cardInstanceId);
-        if (!card) throw new Error('Card not found');
-        if (card.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
-        if (card.location !== 'hand') throw new Error('Card not in hand');
+        if (!card) throw new SenderError('Card not found');
+        if (card.owner.toHexString() !== ctx.sender.toHexString()) throw new SenderError('Not your card');
+        if (card.location !== 'hand') throw new SenderError('Card not in hand');
 
         const def = getCardDef(card.cardDefId);
-        if (def.type !== 'hack') throw new Error('Card is not a hack');
-        if (!def.effect) throw new Error('Hack has no effect');
+        if (def.type !== 'hack') throw new SenderError('Card is not a hack');
+        if (!def.effect) throw new SenderError('Hack has no effect');
 
         // Spend energy
         game = spendEnergy(game, ctx.sender, def.cost);
@@ -418,20 +431,20 @@ export const applyBuff = spacetimedb.reducer(
     (ctx, { gameId, buffCardId, targetId }) => {
         let game = getGame(ctx, gameId);
         isMyTurn(ctx, game);
-        if (game.phase !== 'main') throw new Error('Can only apply buffs in main phase');
+        if (game.phase !== 'main') throw new SenderError('Can only apply buffs in main phase');
 
         const buffCard = findGameCard(ctx, gameId, buffCardId);
-        if (!buffCard) throw new Error('Buff card not found');
-        if (buffCard.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Not your card');
-        if (buffCard.location !== 'hand') throw new Error('Card not in hand');
+        if (!buffCard) throw new SenderError('Buff card not found');
+        if (buffCard.owner.toHexString() !== ctx.sender.toHexString()) throw new SenderError('Not your card');
+        if (buffCard.location !== 'hand') throw new SenderError('Card not in hand');
 
         const def = getCardDef(buffCard.cardDefId);
-        if (def.type !== 'buff') throw new Error('Card is not a buff');
+        if (def.type !== 'buff') throw new SenderError('Card is not a buff');
 
         const target = findGameCard(ctx, gameId, targetId);
-        if (!target) throw new Error('Target not found');
-        if (target.location !== 'field') throw new Error('Target not on field');
-        if (target.owner.toHexString() !== ctx.sender.toHexString()) throw new Error('Can only buff own cards');
+        if (!target) throw new SenderError('Target not found');
+        if (target.location !== 'field') throw new SenderError('Target not on field');
+        if (target.owner.toHexString() !== ctx.sender.toHexString()) throw new SenderError('Can only buff own cards');
 
         // Spend energy
         game = spendEnergy(game, ctx.sender, def.cost);
@@ -453,6 +466,7 @@ export const applyBuff = spacetimedb.reducer(
                 ctx.db.cardInstance.id.update({
                     ...target,
                     currentHp: target.currentHp + (def.effect.value || 0),
+                    maxHp: getMaxHp(target) + (def.effect.value || 0),
                 });
                 break;
             case 'stealth':
@@ -466,6 +480,7 @@ export const applyBuff = spacetimedb.reducer(
                     ...target,
                     currentAtk: target.currentAtk + (def.effect.value || 0),
                     currentHp: target.currentHp + (def.effect.value || 0),
+                    maxHp: getMaxHp(target) + (def.effect.value || 0),
                 });
                 break;
             case 'grant_shield':
@@ -495,7 +510,7 @@ export const endPhase = spacetimedb.reducer(
         };
 
         const nextPhase = phaseOrder[game.phase];
-        if (!nextPhase) throw new Error('Cannot advance from this phase');
+        if (!nextPhase) throw new SenderError('Cannot advance from this phase');
 
         game = { ...game, phase: nextPhase };
 
@@ -603,15 +618,15 @@ export const endTurn = spacetimedb.reducer(
         for (const card of opponentField) {
             const cDef = getCardDef(card.cardDefId);
             if (cDef.effect && cDef.effect.trigger === 'on_turn_start' && cDef.effect.action === 'heal_ally') {
-                // Heal the first ally below its base HP, capped at base HP
+                // Heal the first damaged ally, capped at its max HP
                 const damaged = getFieldCards(ctx, gameId, opponentHex)
-                    .filter((a: any) => a.currentHp < getCardDef(a.cardDefId).hp);
+                    .filter((a: any) => a.currentHp < getMaxHp(a));
                 if (damaged.length > 0) {
                     const healTarget = damaged[0];
                     const htDef = getCardDef(healTarget.cardDefId);
                     ctx.db.cardInstance.id.update({
                         ...healTarget,
-                        currentHp: Math.min(htDef.hp, healTarget.currentHp + (cDef.effect.value || 1)),
+                        currentHp: Math.min(getMaxHp(healTarget), healTarget.currentHp + (cDef.effect.value || 1)),
                     });
                     logEvent(ctx, gameId, newTurnNumber, 'heal',
                         `${cDef.name} curou ${htDef.name} em ${cDef.effect.value} HP`);
@@ -630,11 +645,11 @@ export const forfeit = spacetimedb.reducer(
     { gameId: t.u64() },
     (ctx, { gameId }) => {
         let game = getGame(ctx, gameId);
-        if (game.status !== 'active') throw new Error('Game is not active');
+        if (game.status !== 'active') throw new SenderError('Game is not active');
 
         const myHex = ctx.sender.toHexString();
         if (myHex !== game.player1.toHexString() && myHex !== game.player2.toHexString()) {
-            throw new Error('Not a player in this game');
+            throw new SenderError('Not a player in this game');
         }
 
         const opponent = getOpponent(game, myHex);

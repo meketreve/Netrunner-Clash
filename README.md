@@ -7,8 +7,8 @@ Turn-based cyberpunk card game with real-time multiplayer via SpacetimeDB.
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 16, React 19, TypeScript |
-| Real-time sync | SpacetimeDB SDK 2.0 |
-| Auth | NextAuth v5 + Google OAuth |
+| Real-time sync | SpacetimeDB SDK 2.13 |
+| Auth | NextAuth v5 + Google OAuth (Google ID token is the SpacetimeDB token) |
 | Backend/DB | SpacetimeDB (hosted cloud) |
 | Deploy | Vercel |
 
@@ -24,11 +24,11 @@ Turn-based cyberpunk card game with real-time multiplayer via SpacetimeDB.
 │       └── module_bindings/ # Auto-generated SpacetimeDB bindings
 ├── spacetimedb/             # SpacetimeDB server module
 │   └── src/
-│       ├── schema.ts        # Tables: player, game, cardInstance, gameLog
+│       ├── schema.ts        # Tables: player, game, cardInstance, gameLog, disconnectTimer
+│       ├── views.ts         # What each client may read (public_player, my_player, my_cards)
 │       ├── cards.ts         # 20 card definitions with effects
 │       ├── game-logic.ts    # Core game reducers (play, attack, hack)
-│       ├── matchmaking.ts   # Queue and game creation
-│       └── ranking.ts       # Leaderboard and stats
+│       └── matchmaking.ts   # Login, queue, game creation, disconnect grace period
 └── spacetime.json           # SpacetimeDB module config
 ```
 
@@ -51,7 +51,7 @@ Players queue for a match, get paired automatically, and take turns playing card
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - [SpacetimeDB CLI](https://spacetimedb.com/install)
 - Google OAuth credentials
 
@@ -68,12 +68,18 @@ cd ../spacetimedb && npm install
 Create `client/.env.local`:
 
 ```env
-SPACETIMEDB_DB_NAME=your-module-name
-SPACETIMEDB_HOST=https://maincloud.spacetimedb.com
+# Optional — defaults to maincloud / royal-oil-0688
+NEXT_PUBLIC_SPACETIMEDB_URI=wss://maincloud.spacetimedb.com
+NEXT_PUBLIC_SPACETIMEDB_MODULE=your-module-name
+# Google OAuth (AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET also work)
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 AUTH_SECRET=your-nextauth-secret
 ```
+
+The module only registers players whose Google ID token was issued to the client ID
+hard-coded in `spacetimedb/src/matchmaking.ts` (`GOOGLE_CLIENT_ID`). Using another
+OAuth client means changing that constant and republishing the module.
 
 ### Run
 
@@ -92,12 +98,17 @@ Frontend runs at `http://localhost:3000`.
 
 ## Database Schema
 
-| Table | Key Columns |
-|-------|------------|
-| `player` | identity (PK), name, wins, losses, isInQueue, isOnline |
-| `game` | id (PK), player1, player2, currentTurn, phase, p1Hp, p2Hp, p1Energy, p2Energy, status |
-| `cardInstance` | id (PK), gameId, owner, cardDefId, location, fieldSlot, currentHp, currentAtk |
-| `gameLog` | id (PK), gameId, turn, eventType, message |
+| Table | Access | Key Columns |
+|-------|--------|------------|
+| `player` | private | identity (PK), name, email, googleId, wins, losses, isInQueue, isOnline |
+| `game` | public | id (PK), player1, player2, currentTurn, phase, p1Hp, p2Hp, p1Energy, p2Energy, status |
+| `cardInstance` | private | id (PK), gameId (index), owner, cardDefId, location, fieldSlot, currentHp, maxHp |
+| `gameLog` | public | id (PK), gameId, turn, eventType, message |
+| `disconnectTimer` | private | scheduled forfeit 30s after a player drops mid-game |
+
+Clients read the private tables only through views: `public_player` (no email),
+`my_player` (own profile) and `my_cards` (own hand/field/graveyard + opponent's
+field/graveyard; decks and the opponent's hand are never sent).
 
 ## Key Reducers (SpacetimeDB)
 
@@ -106,11 +117,13 @@ Frontend runs at `http://localhost:3000`.
 | `joinQueue` | Add player to matchmaking queue |
 | `leaveQueue` | Remove from queue |
 | `playCard` | Move card from hand to field |
-| `attackWithCard` | Unit attacks opponent unit or player |
+| `attack` | Unit attacks opponent unit or player |
 | `useHack` | Cast instant spell card |
 | `applyBuff` | Apply buff card to a unit |
 | `endPhase` | Advance turn phase |
+| `endTurn` | Pass the turn |
 | `forfeit` | Concede current game |
+| `setPlayerName` | Rename (1–20 chars) |
 
 ## Deploy
 

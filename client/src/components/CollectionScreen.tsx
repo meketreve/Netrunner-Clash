@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { CARDS, getCardVisual, type CardType } from '@/lib/card-data';
+import { CARDS, type CardType } from '@/lib/card-data';
 import Card from './Card';
 import '@/styles/cards.css';
 import '@/styles/game.css';
@@ -87,7 +87,7 @@ export default function CollectionScreen({ onBack }: CollectionScreenProps) {
                                 size="large"
                             />
                             <div className="collection-screen__card-flavor">
-                                "{card.flavor}"
+                                &ldquo;{card.flavor}&rdquo;
                             </div>
                         </div>
                     ))

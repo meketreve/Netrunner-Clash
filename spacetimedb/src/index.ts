@@ -10,14 +10,10 @@
 export { default } from './schema.js';
 
 // Matchmaking reducers
-export { registerPlayer, setPlayerName, updateProfile, completeTutorial, joinQueue, leaveQueue, clientConnected, clientDisconnected } from './matchmaking.js';
+export { setPlayerName, completeTutorial, joinQueue, leaveQueue, clientConnected, clientDisconnected, forfeitOnDisconnect } from './matchmaking.js';
 
 // Game logic reducers
 export { playCard, attack, useHack, applyBuff, endPhase, endTurn, forfeit } from './game-logic.js';
 
-// Ranking reducers
-export { getTopPlayers, searchPlayers, getPlayerRank, getRankingStats } from './ranking.js';
-
-// The performance-* / connection-pool / message-batcher / asset-manager files are NOT
-// exported: they start setInterval at import, which the SpacetimeDB runtime lacks,
-// and none of them define reducers.
+// Client-facing views over the private tables
+export { publicPlayer, myPlayer, myCards } from './views.js';

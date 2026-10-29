@@ -90,6 +90,8 @@ export function useGameAnimations(
             if (!prev) {
                 // New card instance — check if it's on field (summon)
                 if (card.location === 'field') {
+                    // Animations react to rows pushed by the SpacetimeDB subscription (an external system)
+                    // eslint-disable-next-line react-hooks/set-state-in-effect
                     triggerCardAnimation(key, 'card--summoning');
                 }
                 continue;

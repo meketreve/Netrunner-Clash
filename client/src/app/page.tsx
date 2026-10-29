@@ -1,11 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 
 export default function HomePage() {
-  const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
-
   return (
     <div style={{
       minHeight: '100vh',
@@ -85,8 +82,6 @@ export default function HomePage() {
           <button
             className="cyber-btn"
             style={{ width: '100%', padding: '16px 32px', fontSize: '1rem' }}
-            onMouseEnter={() => setHoveredBtn('play')}
-            onMouseLeave={() => setHoveredBtn(null)}
           >
             🎮 JOGAR
           </button>
@@ -96,8 +91,6 @@ export default function HomePage() {
           <button
             className="cyber-btn cyber-btn--magenta"
             style={{ width: '100%', padding: '16px 32px', fontSize: '1rem' }}
-            onMouseEnter={() => setHoveredBtn('collection')}
-            onMouseLeave={() => setHoveredBtn(null)}
           >
             📦 COLEÇÃO
           </button>

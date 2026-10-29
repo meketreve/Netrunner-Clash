@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import Link from 'next/link';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { tables, type DbConnection } from '@/module_bindings';
-import type { Game, CardInstance, GameLog, Player } from '@/module_bindings/types';
+import type { Game, CardInstance, GameLog, PlayerSummary } from '@/module_bindings/types';
 import Card from './Card';
 import TutorialSystem from './TutorialSystem';
 import { useToast } from './GameToast';
@@ -24,10 +24,11 @@ function Lobby() {
     const conn = spacetime.getConnection() as DbConnection | null;
     const myIdentity = spacetime.identity?.toHexString() || '';
 
-    const [allPlayers] = useTable(tables.player);
+    const [allPlayers] = useTable(tables.publicPlayer);
+    const [myPlayerRows] = useTable(tables.myPlayer);
     const [allGames] = useTable(tables.game);
 
-    const myPlayer = allPlayers.find((p: Player) => p.identity.toHexString() === myIdentity);
+    const myPlayer = myPlayerRows[0];
     const isInQueue = myPlayer?.isInQueue ?? false;
 
     // Leaderboard logic
@@ -38,50 +39,28 @@ function Lobby() {
         [allPlayers]
     );
 
-    const [showTutorial, setShowTutorial] = useState(false);
-    const [showFinishedGame, setShowFinishedGame] = useState(true);
-
-    // Sync Google Session with SpacetimeDB
-    useEffect(() => {
-        if (session?.user && myPlayer && !myPlayer.googleId) {
-            (conn as any)?.reducers.updateProfile({
-                name: session.user.name || myPlayer.name,
-                googleId: session.user.id || '',
-                email: session.user.email || '',
-                picture: session.user.image || ''
-            });
-        }
-    }, [session, myPlayer, conn]);
-
-    // Check for tutorial
-    useEffect(() => {
-        if (myPlayer && !myPlayer.tutorialCompleted) {
-            setShowTutorial(true);
-        }
-    }, [myPlayer]);
+    // Profile (name, email, picture) comes from the verified Google token on the server
+    const [tutorialDismissed, setTutorialDismissed] = useState(false);
+    const showTutorial = !!myPlayer && !myPlayer.tutorialCompleted && !tutorialDismissed;
+    // Finished game the player closed; a newer finished game has another id and shows again
+    const [dismissedGameId, setDismissedGameId] = useState<bigint | null>(null);
 
     const handleTutorialComplete = () => {
-        (conn as any)?.reducers.completeTutorial({});
-        setShowTutorial(false);
+        conn?.reducers.completeTutorial({});
+        setTutorialDismissed(true);
     };
 
     // Check if we have an active or recently finished game (prioritize active)
     const myGame = (g: Game) => g.player1.toHexString() === myIdentity || g.player2.toHexString() === myIdentity;
     const liveGame = allGames.find((g: Game) => g.status === 'active' && myGame(g));
-    const finishedGame = showFinishedGame
-        ? [...allGames]
-            .filter((g: Game) => g.status === 'finished' && myGame(g))
-            .sort((a, b) => Number(b.id) - Number(a.id))[0] || null
-        : null;
+    const latestFinished = [...allGames]
+        .filter((g: Game) => g.status === 'finished' && myGame(g))
+        .sort((a, b) => Number(b.id) - Number(a.id))[0];
+    const finishedGame = latestFinished && latestFinished.id !== dismissedGameId ? latestFinished : null;
     const activeGame = liveGame || finishedGame;
 
-    // Re-enable finished game display when a new active game starts
-    useEffect(() => {
-        if (liveGame) setShowFinishedGame(true);
-    }, [liveGame]);
-
     if (activeGame) {
-        return <GameBoard game={activeGame} myIdentity={myIdentity} onDismiss={() => setShowFinishedGame(false)} />;
+        return <GameBoard game={activeGame} myIdentity={myIdentity} onDismiss={() => setDismissedGameId(activeGame.id)} />;
     }
 
     const handleJoinQueue = () => conn?.reducers.joinQueue({});
@@ -97,15 +76,11 @@ function Lobby() {
                     </p>
                 </div>
 
-                {!session ? (
-                    <button className="google-btn" onClick={() => signIn('google')}>
-                        <img src="https://authjs.dev/img/providers/google.svg" className="google-btn__icon" alt="Google" />
-                        Acessar com Google
-                    </button>
-                ) : (
+                {session?.user && (
                     <div className="lobby__user-brief" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img src={session.user?.image || ''} className="leaderboard__avatar" alt="Profile" />
-                        <span style={{ fontSize: '0.8rem' }}>{session.user?.name}</span>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- Google avatar, external URL */}
+                        <img src={session.user.image || ''} className="leaderboard__avatar" alt="Profile" />
+                        <span style={{ fontSize: '0.8rem' }}>{session.user.name}</span>
                         <button className="cyber-btn cyber-btn--small" onClick={() => signOut()}>SAIR</button>
                     </div>
                 )}
@@ -131,9 +106,10 @@ function Lobby() {
                     <div className="leaderboard">
                         <div className="leaderboard__title">🏆 Top Hackers</div>
                         <div className="leaderboard__list">
-                            {topPlayers.map((player: Player, index: number) => (
+                            {topPlayers.map((player: PlayerSummary, index: number) => (
                                 <div key={player.identity.toHexString()} className="leaderboard__item">
                                     <span className={`leaderboard__rank leaderboard__rank--${index + 1}`}>#{index + 1}</span>
+                                    {/* eslint-disable-next-line @next/next/no-img-element -- external avatar URL */}
                                     <img src={player.picture || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.name}`} className="leaderboard__avatar" alt="" />
                                     <span className="leaderboard__name">{player.name}</span>
                                     <span className="leaderboard__wins">{player.wins} v</span>
@@ -170,7 +146,7 @@ function Lobby() {
 
                 <div className="lobby__online">
                     <span className="lobby__online-label">Jogadores online:</span>
-                    <span className="lobby__online-count">{allPlayers.filter((p: Player) => p.isOnline).length}</span>
+                    <span className="lobby__online-count">{allPlayers.filter((p: PlayerSummary) => p.isOnline).length}</span>
                 </div>
             </div>
         </div>
@@ -186,7 +162,7 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
     const conn = spacetime.getConnection() as DbConnection | null;
     const { showGameError } = useToast();
 
-    const [allCards] = useTable(tables.cardInstance);
+    const [allCards] = useTable(tables.myCards);
     const [allLogs] = useTable(tables.gameLog);
 
     const [selectedCardId, setSelectedCardId] = useState<bigint | null>(null);

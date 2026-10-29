@@ -33,22 +33,21 @@ spacetime.json
 ## Onde fica cada coisa
 
 - `spacetimedb/src/index.ts` — entrada do módulo: só re-exporta schema + reducers (reducer novo tem que ser exportado aqui)
-- `spacetimedb/src/schema.ts` — tabelas `player`, `game`, `cardInstance`, `gameLog` (export default)
+- `spacetimedb/src/schema.ts` — tabelas; `player`/`cardInstance`/`disconnectTimer` são PRIVADAS (client lê via views)
+- `spacetimedb/src/views.ts` — `public_player` (sem email), `my_player`, `my_cards` (esconde baralhos e a mão do oponente)
 - `spacetimedb/src/game-logic.ts` — reducers de partida: playCard, attack, useHack, applyBuff, endPhase, endTurn, forfeit
-- `spacetimedb/src/matchmaking.ts` — registerPlayer, joinQueue/leaveQueue, clientConnected/Disconnected, perfil/tutorial
+- `spacetimedb/src/matchmaking.ts` — login (valida JWT Google em clientConnected, `GOOGLE_CLIENT_ID`), fila, desconexão com 30s de tolerância (`forfeitOnDisconnect` agendado)
 - `spacetimedb/src/cards.ts` — `CARD_DEFS` (20 cartas) e `DEFAULT_DECK`; `game-utils.ts` = helpers
-- `spacetimedb/src/ranking.ts` — reducers de ranking (página do front foi removida em a152d5c)
-- `spacetimedb/src/{performance-*,connection-pool,message-batcher,query-optimizer,asset-manager}.ts` — camada de "performance" fora do fluxo principal do jogo
 - `client/src/module_bindings/` — GERADO pelo `spacetime generate`; não editar à mão
-- `client/src/components/SpacetimeProvider.tsx` — conexão (URI + nome do banco) e token
-- `client/src/lib/spacetimedb.ts` — config da conexão + token em localStorage
-- `client/src/auth.ts` + `app/api/auth/[...nextauth]/route.ts` — NextAuth v5 com Google
+- `client/src/components/SpacetimeProvider.tsx` — tela de login + conexão com o `id_token` Google (só em `/game`)
+- `client/src/lib/spacetimedb.ts` — URI e nome do banco
+- `client/src/auth.ts` + `types/next-auth.d.ts` — NextAuth v5: guarda e renova o `id_token` Google na sessão
 - `client/src/components/GameBoard.tsx` — tela da partida (maior componente); `CollectionScreen.tsx`, `TutorialSystem.tsx`, `GameToast.tsx`
 - `client/src/lib/card-data.ts` — dados de carta do lado do cliente (espelha `cards.ts`)
 
 ## Pontos de entrada e fluxos principais
 
-- Login Google (NextAuth) → `SpacetimeProvider` conecta no maincloud → `clientConnected` registra o player
+- `/game` → login Google (NextAuth) → `SpacetimeProvider` conecta com o `id_token` → `clientConnected` valida iss/aud e registra o player (identidade = conta Google)
 - Home `app/page.tsx` → `/game` → `joinQueue` → matchmaking pareia e cria `game` + mãos iniciais (4 cartas)
-- Turno: Recharge → Main → Combat → End; ações = reducers de `game-logic.ts`; cliente reage às tabelas assinadas
+- Turno: Recharge → Main → Combat → End; ações = reducers de `game-logic.ts`; cliente lê `game`/`gameLog` + views
 - Mudou schema/reducer → `spacetime publish` → `spacetime generate` → ajustar `client/`

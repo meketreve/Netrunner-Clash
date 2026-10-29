@@ -3,6 +3,8 @@
 // Shared logic between matchmaking and game logic
 // ============================================================
 
+import { SenderError } from 'spacetimedb/server';
+
 export function updatePlayerStats(ctx: any, winner: any, loser: any) {
     const w = ctx.db.player.identity.find(winner);
     const l = ctx.db.player.identity.find(loser);
@@ -36,5 +38,5 @@ export function getGame(ctx: any, gameId: bigint) {
     for (const g of ctx.db.game.iter()) {
         if (g.id === gameId) return g;
     }
-    throw new Error('Game not found');
+    throw new SenderError('Game not found');
 }

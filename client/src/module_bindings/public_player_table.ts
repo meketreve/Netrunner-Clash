@@ -10,8 +10,12 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export default {
-  searchTerm: __t.string(),
-  limit: __t.option(__t.u32()),
-  page: __t.option(__t.u32()),
-};
+export default __t.row({
+  identity: __t.identity().primaryKey(),
+  name: __t.string(),
+  picture: __t.string(),
+  isOnline: __t.bool().name("is_online"),
+  isInQueue: __t.bool().name("is_in_queue"),
+  wins: __t.u32(),
+  losses: __t.u32(),
+});

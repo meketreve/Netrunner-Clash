@@ -25,8 +25,17 @@ export const CardInstance = __t.object("CardInstance", {
   stealthTurns: __t.u32(),
   tempAtkBuff: __t.i32(),
   deckOrder: __t.u32(),
+  maxHp: __t.i32(),
 });
 export type CardInstance = __Infer<typeof CardInstance>;
+
+export const DisconnectTimer = __t.object("DisconnectTimer", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  player: __t.identity(),
+  gameId: __t.u64(),
+});
+export type DisconnectTimer = __Infer<typeof DisconnectTimer>;
 
 export const Game = __t.object("Game", {
   id: __t.u64(),
@@ -55,6 +64,12 @@ export const GameLog = __t.object("GameLog", {
 });
 export type GameLog = __Infer<typeof GameLog>;
 
+export const MyCards = __t.object("MyCards", {});
+export type MyCards = __Infer<typeof MyCards>;
+
+export const MyPlayer = __t.object("MyPlayer", {});
+export type MyPlayer = __Infer<typeof MyPlayer>;
+
 export const Player = __t.object("Player", {
   identity: __t.identity(),
   name: __t.string(),
@@ -68,4 +83,18 @@ export const Player = __t.object("Player", {
   tutorialCompleted: __t.bool(),
 });
 export type Player = __Infer<typeof Player>;
+
+export const PlayerSummary = __t.object("PlayerSummary", {
+  identity: __t.identity(),
+  name: __t.string(),
+  picture: __t.string(),
+  isOnline: __t.bool(),
+  isInQueue: __t.bool(),
+  wins: __t.u32(),
+  losses: __t.u32(),
+});
+export type PlayerSummary = __Infer<typeof PlayerSummary>;
+
+export const PublicPlayer = __t.object("PublicPlayer", {});
+export type PublicPlayer = __Infer<typeof PublicPlayer>;
 

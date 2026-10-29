@@ -25,4 +25,5 @@ export default __t.row({
   stealthTurns: __t.u32().name("stealth_turns"),
   tempAtkBuff: __t.i32().name("temp_atk_buff"),
   deckOrder: __t.u32().name("deck_order"),
+  maxHp: __t.i32().name("max_hp"),
 });

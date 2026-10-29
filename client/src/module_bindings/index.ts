@@ -40,41 +40,25 @@ import CompleteTutorialReducer from "./complete_tutorial_reducer";
 import EndPhaseReducer from "./end_phase_reducer";
 import EndTurnReducer from "./end_turn_reducer";
 import ForfeitReducer from "./forfeit_reducer";
-import GetPlayerRankReducer from "./get_player_rank_reducer";
-import GetRankingStatsReducer from "./get_ranking_stats_reducer";
-import GetTopPlayersReducer from "./get_top_players_reducer";
 import JoinQueueReducer from "./join_queue_reducer";
 import LeaveQueueReducer from "./leave_queue_reducer";
 import PlayCardReducer from "./play_card_reducer";
-import RegisterPlayerReducer from "./register_player_reducer";
-import SearchPlayersReducer from "./search_players_reducer";
 import SetPlayerNameReducer from "./set_player_name_reducer";
-import UpdateProfileReducer from "./update_profile_reducer";
 import UseHackReducer from "./use_hack_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
-import CardInstanceRow from "./card_instance_table";
 import GameRow from "./game_table";
 import GameLogRow from "./game_log_table";
-import PlayerRow from "./player_table";
+import MyCardsRow from "./my_cards_table";
+import MyPlayerRow from "./my_player_table";
+import PublicPlayerRow from "./public_player_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
-  cardInstance: __table({
-    name: 'card_instance',
-    indexes: [
-      { accessor: 'id', name: 'card_instance_id_idx_btree', algorithm: 'btree', columns: [
-        'id',
-      ] },
-    ],
-    constraints: [
-      { name: 'card_instance_id_key', constraint: 'unique', columns: ['id'] },
-    ],
-  }, CardInstanceRow),
   game: __table({
     name: 'game',
     indexes: [
@@ -97,17 +81,27 @@ const tablesSchema = __schema({
       { name: 'game_log_id_key', constraint: 'unique', columns: ['id'] },
     ],
   }, GameLogRow),
-  player: __table({
-    name: 'player',
+  myCards: __table({
+    name: 'my_cards',
     indexes: [
-      { accessor: 'identity', name: 'player_identity_idx_btree', algorithm: 'btree', columns: [
-        'identity',
-      ] },
     ],
     constraints: [
-      { name: 'player_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
-  }, PlayerRow),
+  }, MyCardsRow),
+  myPlayer: __table({
+    name: 'my_player',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyPlayerRow),
+  publicPlayer: __table({
+    name: 'public_player',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, PublicPlayerRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -118,16 +112,10 @@ const reducersSchema = __reducers(
   __reducerSchema("end_phase", EndPhaseReducer),
   __reducerSchema("end_turn", EndTurnReducer),
   __reducerSchema("forfeit", ForfeitReducer),
-  __reducerSchema("get_player_rank", GetPlayerRankReducer),
-  __reducerSchema("get_ranking_stats", GetRankingStatsReducer),
-  __reducerSchema("get_top_players", GetTopPlayersReducer),
   __reducerSchema("join_queue", JoinQueueReducer),
   __reducerSchema("leave_queue", LeaveQueueReducer),
   __reducerSchema("play_card", PlayCardReducer),
-  __reducerSchema("register_player", RegisterPlayerReducer),
-  __reducerSchema("search_players", SearchPlayersReducer),
   __reducerSchema("set_player_name", SetPlayerNameReducer),
-  __reducerSchema("update_profile", UpdateProfileReducer),
   __reducerSchema("use_hack", UseHackReducer),
 );
 
