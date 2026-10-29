@@ -1,5 +1,5 @@
 ---
-updated: 2026-10-03
+updated: 2026-10-29
 tier: 2
 ---
 
@@ -18,17 +18,15 @@ Sem scripts na raiz; cada pacote tem o seu. Banco: `royal-oil-0688` em `mainclou
 - Env do front: `client/.env.local` (ver LEARNINGS [env])
 
 <!-- auto:start -->
-gerado em: 2026-10-03
+gerado em: 2026-10-29
 
 primeiro nível:
 
 ```
 client
-docs
 README.md
 spacetimedb
 spacetime.json
-src
 ```
 <!-- auto:end -->
 
@@ -47,7 +45,6 @@ src
 - `client/src/auth.ts` + `app/api/auth/[...nextauth]/route.ts` — NextAuth v5 com Google
 - `client/src/components/GameBoard.tsx` — tela da partida (maior componente); `CollectionScreen.tsx`, `TutorialSystem.tsx`, `GameToast.tsx`
 - `client/src/lib/card-data.ts` — dados de carta do lado do cliente (espelha `cards.ts`)
-- `src/module_bindings/` e `docs/` na raiz — pastas vazias, não versionadas
 
 ## Pontos de entrada e fluxos principais
 

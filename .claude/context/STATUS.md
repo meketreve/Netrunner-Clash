@@ -1,5 +1,5 @@
 ---
-updated: 2026-10-03
+updated: 2026-10-29
 tier: 2
 ---
 
@@ -24,9 +24,10 @@ Nenhuma definida. Ao retomar: `cd client && npm install && npm run build` e conf
 ## Bruto do git (auto — não editar)
 
 <!-- auto:start -->
-data: 2026-10-03
+data: 2026-10-29
 
 ```
+aab2218 chore: contexto do projeto e AGENTS.md
 28b60a3 new readme.md
 a152d5c feat: remove ranking page and cleanup home page and tutorial references
 4b63081 build: update .gitignore with standard patterns for tools, build artifacts, and logs
@@ -34,8 +35,9 @@ a152d5c feat: remove ranking page and cleanup home page and tutorial references
 d6f39df style: center card name, increase description and flavor text sizes in collection
 285c100 fix: add missing CSS imports to CollectionScreen for standalone rendering
 f2cc3d8 fix: Resolve TypeScript compilation error in ranking page
-3242786 feat: Integrate real SpacetimeDB data in ranking system
 --- status ---
-?? .claude/
+ M .claude/context/LEARNINGS.md
+ M .claude/context/MAP.md
+ M .claude/context/STATUS.md
 ```
 <!-- auto:end -->
