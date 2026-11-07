@@ -10,6 +10,7 @@ import Card from './Card';
 import TutorialSystem from './TutorialSystem';
 import { useToast } from './GameToast';
 import { getCardVisual } from '@/lib/card-data';
+import { canAttackPlayerDirectly } from '@/lib/combat-rules';
 import { useGameAnimations } from '@/lib/useGameAnimations';
 import '@/styles/cards.css';
 import '@/styles/game.css';
@@ -200,6 +201,20 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
         gameCards.filter((c: CardInstance) => c.owner.toHexString() !== myIdentity && c.location === 'field'),
         [gameCards, myIdentity]);
 
+    const selectedCard = useMemo(() =>
+        gameCards.find((c: CardInstance) => c.id === selectedCardId) ?? null,
+        [gameCards, selectedCardId]);
+
+    // Direct attack on the player: Bypass, or nothing targetable left on the enemy field
+    const canDirectAttack = targetMode === 'attack' && selectedCard !== null &&
+        canAttackPlayerDirectly(getCardVisual(selectedCard.cardDefId).keywords, opponentFieldCards);
+
+    // A selected hack that acts on no specific card is cast with a button (no enemy click needed)
+    const selectedHack = selectedCard?.location === 'hand' ? getCardVisual(selectedCard.cardDefId) : null;
+    const castableHack = isMyTurn && game.phase === 'main' && selectedCard && selectedHack?.type === 'hack' && !selectedHack.needsTarget
+        ? { id: selectedCard.id, name: selectedHack.name }
+        : null;
+
     // ============================================================
     // ACTIONS — Call real SpacetimeDB reducers with error handling
     // ============================================================
@@ -265,11 +280,9 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
 
         if (targetMode === 'buff' && card.owner.toHexString() === myIdentity && card.location === 'field') {
             if (selectedCardId !== null) {
-                const selectedCard = gameCards.find((c: CardInstance) => c.id === selectedCardId);
-                if (selectedCard) {
-                    const def = getCardVisual(selectedCard.cardDefId);
-                    if (def.type === 'buff') handleApplyBuff(selectedCardId, card.id);
-                    else if (def.type === 'hack') handleUseHack(selectedCardId, card.id);
+                const picked = gameCards.find((c: CardInstance) => c.id === selectedCardId);
+                if (picked && getCardVisual(picked.cardDefId).type === 'buff') {
+                    handleApplyBuff(selectedCardId, card.id);
                 }
             }
             return;
@@ -294,7 +307,7 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
                     setTargetMode('attack');
                 } else if (card.location === 'hand' && def.type === 'buff') {
                     setTargetMode('buff');
-                } else if (card.location === 'hand' && def.type === 'hack') {
+                } else if (card.location === 'hand' && def.type === 'hack' && def.needsTarget) {
                     setTargetMode('hack');
                 } else {
                     setTargetMode('none');
@@ -317,10 +330,10 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
     }, [isMyTurn, game.phase, selectedCardId, gameCards, handlePlayCard]);
 
     const handleDirectAttack = useCallback(() => {
-        if (targetMode === 'attack' && selectedCardId !== null && opponentFieldCards.length === 0) {
+        if (canDirectAttack && selectedCardId !== null) {
             handleAttack(selectedCardId, BigInt(0));
         }
-    }, [targetMode, selectedCardId, opponentFieldCards.length, handleAttack]);
+    }, [canDirectAttack, selectedCardId, handleAttack]);
 
     // ============================================================
     // RENDER
@@ -387,7 +400,7 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
                     <div className="player-info__hp">
                         <div className="player-info__hp-bar"
                             onClick={handleDirectAttack}
-                            style={{ cursor: targetMode === 'attack' && opponentFieldCards.length === 0 ? 'pointer' : 'default' }}
+                            style={{ cursor: canDirectAttack ? 'pointer' : 'default' }}
                         >
                             <div
                                 className={`player-info__hp-fill ${hpClass(opponentHp)}`}
@@ -439,6 +452,11 @@ function GameBoard({ game, myIdentity, onDismiss }: { game: Game; myIdentity: st
                         {game.phase === 'main' && (
                             <button className="cyber-btn" onClick={handleEndPhase}>
                                 ⚔️ IR PARA COMBATE
+                            </button>
+                        )}
+                        {castableHack && (
+                            <button className="cyber-btn" onClick={() => handleUseHack(castableHack.id, BigInt(0))}>
+                                ⚡ USAR {castableHack.name.toUpperCase()}
                             </button>
                         )}
                         <button className="cyber-btn cyber-btn--magenta" onClick={handleEndTurn}>

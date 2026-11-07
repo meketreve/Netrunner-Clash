@@ -16,6 +16,7 @@ export interface CardVisual {
     description: string;
     flavor: string;
     color: string; // Cor da borda neon
+    needsTarget?: boolean; // hacks that act on one enemy card (the rest are cast without a target)
 }
 
 export const CARDS: Record<number, CardVisual> = {
@@ -34,11 +35,11 @@ export const CARDS: Record<number, CardVisual> = {
     13: { id: 13, name: 'Shield Protocol', type: 'buff', cost: 2, atk: 0, hp: 0, keywords: [], description: 'Concede Shield ao alvo.', flavor: 'O primeiro golpe é grátis.', color: '#00f0ff' },
     14: { id: 14, name: 'Drain Module', type: 'buff', cost: 3, atk: 0, hp: 0, keywords: [], description: 'Concede Drain ao alvo.', flavor: 'Rouba energia vital do oponente.', color: '#00ff88' },
     15: { id: 15, name: 'EMP Burst', type: 'hack', cost: 2, atk: 0, hp: 0, keywords: [], description: '2 DMG a todos inimigos.', flavor: 'O pulso não faz distinção.', color: '#f0e000' },
-    16: { id: 16, name: 'System Crash', type: 'hack', cost: 3, atk: 0, hp: 0, keywords: [], description: 'Destrói 1 inimigo com ≤3 HP.', flavor: 'Erro fatal. Sem backup.', color: '#ff2244' },
+    16: { id: 16, name: 'System Crash', type: 'hack', cost: 3, atk: 0, hp: 0, keywords: [], description: 'Destrói 1 inimigo com ≤3 HP.', flavor: 'Erro fatal. Sem backup.', color: '#ff2244', needsTarget: true },
     17: { id: 17, name: 'Data Leak', type: 'hack', cost: 1, atk: 0, hp: 0, keywords: [], description: 'Compra 2 cartas.', flavor: 'Informação é poder.', color: '#00ff88' },
     18: { id: 18, name: 'Reboot', type: 'hack', cost: 4, atk: 0, hp: 0, keywords: [], description: 'Revive 1 aliado com 1 HP.', flavor: 'Todo programa merece uma segunda chance.', color: '#00f0ff' },
-    19: { id: 19, name: 'Glitch', type: 'hack', cost: 2, atk: 0, hp: 0, keywords: [], description: '-2 ATK em 1 inimigo.', flavor: 'Um glitch bem colocado é mortal.', color: '#ff00aa' },
-    20: { id: 20, name: 'Virus Inject', type: 'hack', cost: 3, atk: 0, hp: 0, keywords: [], description: '3 DMG a 1 inimigo.', flavor: 'O vírus se espalha antes que perceba.', color: '#ff2244' },
+    19: { id: 19, name: 'Glitch', type: 'hack', cost: 2, atk: 0, hp: 0, keywords: [], description: '-2 ATK em 1 inimigo.', flavor: 'Um glitch bem colocado é mortal.', color: '#ff00aa', needsTarget: true },
+    20: { id: 20, name: 'Virus Inject', type: 'hack', cost: 3, atk: 0, hp: 0, keywords: [], description: '3 DMG a 1 inimigo.', flavor: 'O vírus se espalha antes que perceba.', color: '#ff2244', needsTarget: true },
 };
 
 export function getCardVisual(id: number): CardVisual {

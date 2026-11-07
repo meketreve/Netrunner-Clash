@@ -190,14 +190,16 @@ export const attack = spacetimedb.reducer(
 
         const opponentHex = getOpponent(game, ctx.sender.toHexString()).toHexString();
         const opponentFieldCards = getFieldCards(ctx, gameId, opponentHex);
+        // Stealthed cards can't be targeted, so they neither shield the player nor act as Taunt
+        const targetableCards = opponentFieldCards.filter((c: any) => c.stealthTurns === 0);
 
         // Check Bypass keyword — can attack player directly
         const hasBypass = atkDef.keywords.includes('bypass');
 
         // Target = 0n means attack player directly
         if (targetId === 0n) {
-            // Can only attack directly if field empty or has bypass
-            if (opponentFieldCards.length > 0 && !hasBypass) {
+            // Can only attack directly if no targetable card is left or has bypass
+            if (targetableCards.length > 0 && !hasBypass) {
                 throw new SenderError('Must attack field cards first (or need Bypass)');
             }
 
@@ -219,7 +221,7 @@ export const attack = spacetimedb.reducer(
             if (target.stealthTurns > 0) throw new SenderError('Target is in stealth');
 
             // Check Taunt: must attack taunt cards first
-            const hasTauntCards = opponentFieldCards.some((c: any) => {
+            const hasTauntCards = targetableCards.some((c: any) => {
                 const d = getCardDef(c.cardDefId);
                 return d.keywords.includes('taunt');
             });
@@ -321,14 +323,55 @@ export const useHack = spacetimedb.reducer(
         if (def.type !== 'hack') throw new SenderError('Card is not a hack');
         if (!def.effect) throw new SenderError('Hack has no effect');
 
+        const myHex = ctx.sender.toHexString();
+        const opponentHex = getOpponent(game, myHex).toHexString();
+
+        // Check what the hack acts on BEFORE paying for it: a hack that can't land
+        // must fail with a message instead of spending the energy and the card
+        let target: any = null;
+        let revivable: any = null;
+        let reviveSlot = -1;
+        switch (def.effect.action) {
+            case 'damage_all_enemies':
+                if (getFieldCards(ctx, gameId, opponentHex).length === 0) {
+                    throw new SenderError('No enemy cards on the field');
+                }
+                break;
+            case 'destroy_low_hp':
+            case 'debuff_atk':
+            case 'damage_single':
+                target = findGameCard(ctx, gameId, targetId);
+                if (!target || target.location !== 'field') throw new SenderError('Invalid target');
+                if (target.owner.toHexString() !== opponentHex) throw new SenderError('Must target an enemy card');
+                if (target.stealthTurns > 0) throw new SenderError('Target is in stealth');
+                if (def.effect.action === 'destroy_low_hp' && target.currentHp > (def.effect.value || 3)) {
+                    throw new SenderError(`Target has more than ${def.effect.value || 3} HP`);
+                }
+                break;
+            case 'revive': {
+                for (const c of ctx.db.cardInstance.gameId.filter(gameId)) {
+                    if (
+                        c.owner.toHexString() === myHex &&
+                        c.location === 'graveyard' &&
+                        getCardDef(c.cardDefId).type === 'character'
+                    ) {
+                        revivable = c;
+                        break;
+                    }
+                }
+                if (!revivable) throw new SenderError('No character in your graveyard');
+                const usedSlots = new Set(getFieldCards(ctx, gameId, myHex).map((fc: any) => fc.fieldSlot));
+                reviveSlot = [0, 1, 2, 3].find(s => !usedSlots.has(s)) ?? -1;
+                if (reviveSlot < 0) throw new SenderError('No free slot on your field');
+                break;
+            }
+        }
+
         // Spend energy
         game = spendEnergy(game, ctx.sender, def.cost);
 
         // Discard the hack card
         ctx.db.cardInstance.id.update({ ...card, location: 'graveyard' });
-
-        const myHex = ctx.sender.toHexString();
-        const opponentHex = getOpponent(game, myHex).toHexString();
 
         // Execute effect
         switch (def.effect.action) {
@@ -347,12 +390,8 @@ export const useHack = spacetimedb.reducer(
                 break;
             }
             case 'destroy_low_hp': {
-                const target = findGameCard(ctx, gameId, targetId);
-                if (target && target.location === 'field' && target.currentHp <= (def.effect.value || 3)) {
-                    ctx.db.cardInstance.id.update({ ...target, location: 'graveyard', currentHp: 0, fieldSlot: 0 });
-                    const tDef = getCardDef(target.cardDefId);
-                    logEvent(ctx, gameId, game.turnNumber, 'death', `${tDef.name} crashou!`);
-                }
+                ctx.db.cardInstance.id.update({ ...target, location: 'graveyard', currentHp: 0, fieldSlot: 0 });
+                logEvent(ctx, gameId, game.turnNumber, 'death', `${getCardDef(target.cardDefId).name} crashou!`);
                 break;
             }
             case 'draw': {
@@ -360,58 +399,30 @@ export const useHack = spacetimedb.reducer(
                 break;
             }
             case 'revive': {
-                // Find first dead character
-                for (const c of ctx.db.cardInstance.iter()) {
-                    if (
-                        c.gameId === gameId &&
-                        c.owner.toHexString() === myHex &&
-                        c.location === 'graveyard'
-                    ) {
-                        const cDef = getCardDef(c.cardDefId);
-                        if (cDef.type === 'character') {
-                            // Find empty slot
-                            const fieldCards = getFieldCards(ctx, gameId, myHex);
-                            const usedSlots = new Set(fieldCards.map((fc: any) => fc.fieldSlot));
-                            let freeSlot = -1;
-                            for (let s = 0; s < 4; s++) {
-                                if (!usedSlots.has(s)) { freeSlot = s; break; }
-                            }
-                            if (freeSlot >= 0) {
-                                ctx.db.cardInstance.id.update({
-                                    ...c, location: 'field', fieldSlot: freeSlot,
-                                    currentHp: def.effect?.value || 1, canAttack: false,
-                                });
-                                logEvent(ctx, gameId, game.turnNumber, 'summon', `${cDef.name} reviveu com 1 HP!`);
-                            }
-                            break;
-                        }
-                    }
-                }
+                ctx.db.cardInstance.id.update({
+                    ...revivable, location: 'field', fieldSlot: reviveSlot,
+                    currentHp: def.effect?.value || 1, canAttack: false,
+                });
+                logEvent(ctx, gameId, game.turnNumber, 'summon', `${getCardDef(revivable.cardDefId).name} reviveu com 1 HP!`);
                 break;
             }
             case 'debuff_atk': {
-                const target = findGameCard(ctx, gameId, targetId);
-                if (target && target.location === 'field') {
-                    ctx.db.cardInstance.id.update({
-                        ...target,
-                        tempAtkBuff: target.tempAtkBuff - (def.effect.value || 2),
-                    });
-                    const tDef = getCardDef(target.cardDefId);
-                    logEvent(ctx, gameId, game.turnNumber, 'buff', `${tDef.name} sofreu -${def.effect.value} ATK!`);
-                }
+                ctx.db.cardInstance.id.update({
+                    ...target,
+                    tempAtkBuff: target.tempAtkBuff - (def.effect.value || 2),
+                });
+                logEvent(ctx, gameId, game.turnNumber, 'buff',
+                    `${getCardDef(target.cardDefId).name} sofreu -${def.effect.value} ATK!`);
                 break;
             }
             case 'damage_single': {
-                const target = findGameCard(ctx, gameId, targetId);
-                if (target && target.location === 'field') {
-                    const newHp = target.currentHp - (def.effect.value || 0);
-                    if (newHp <= 0) {
-                        ctx.db.cardInstance.id.update({ ...target, location: 'graveyard', currentHp: 0, fieldSlot: 0 });
-                        const tDef = getCardDef(target.cardDefId);
-                        logEvent(ctx, gameId, game.turnNumber, 'death', `${tDef.name} destruído por ${def.name}!`);
-                    } else {
-                        ctx.db.cardInstance.id.update({ ...target, currentHp: newHp });
-                    }
+                const newHp = target.currentHp - (def.effect.value || 0);
+                const tDef = getCardDef(target.cardDefId);
+                if (newHp <= 0) {
+                    ctx.db.cardInstance.id.update({ ...target, location: 'graveyard', currentHp: 0, fieldSlot: 0 });
+                    logEvent(ctx, gameId, game.turnNumber, 'death', `${tDef.name} destruído por ${def.name}!`);
+                } else {
+                    ctx.db.cardInstance.id.update({ ...target, currentHp: newHp });
                 }
                 break;
             }
@@ -548,11 +559,7 @@ export const endTurn = spacetimedb.reducer(
                 card.owner.toHexString() === myHex &&
                 card.location === 'field'
             ) {
-                ctx.db.cardInstance.id.update({
-                    ...card,
-                    tempAtkBuff: 0,
-                    stealthTurns: Math.max(0, card.stealthTurns - 1),
-                });
+                ctx.db.cardInstance.id.update({ ...card, tempAtkBuff: 0 });
             }
         }
 
@@ -608,10 +615,15 @@ export const endTurn = spacetimedb.reducer(
             }
         }
 
-        // Enable attack for opponent's field cards
+        // Enable attack for opponent's field cards. Stealth wears off when its owner's turn
+        // starts, so a Stealth Mode cast on my turn protects through the opponent's whole turn.
         const opponentField = getFieldCards(ctx, gameId, opponentHex);
         for (const card of opponentField) {
-            ctx.db.cardInstance.id.update({ ...card, canAttack: true });
+            ctx.db.cardInstance.id.update({
+                ...card,
+                canAttack: true,
+                stealthTurns: Math.max(0, card.stealthTurns - 1),
+            });
         }
 
         // Trigger on_turn_start effects (Neon Medic) on fresh rows, after the update above
